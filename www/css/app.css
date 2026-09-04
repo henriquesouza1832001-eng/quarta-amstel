@@ -1,9 +1,5 @@
-   QUARTA É DIA DE AMSTEL — Design System
-   Mobile-first | Modo claro + escuro
-
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;500;600&display=swap');
 
-   TOKENS — MODO CLARO (padrão)
 :root {
   --amstel-red:    #C8102E;
   --amstel-red-dk: #A00D24;
@@ -71,7 +67,6 @@
   }
 }
 
-   RESET
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
@@ -86,7 +81,6 @@ html, body {
 
 .hidden { display: none !important; }
 
-   AGE GATE
 .age-gate {
   position: fixed;
   inset: 0;
@@ -217,7 +211,6 @@ html, body {
   font-style: italic;
 }
 
-   INSTALL PROMPT
 .install-prompt {
   position: fixed;
   bottom: calc(var(--tabs-h) + var(--safe-bottom) + 12px);
@@ -269,7 +262,6 @@ html, body {
   flex-shrink: 0;
 }
 
-   APP SHELL
 .app {
   display: flex;
   flex-direction: column;
@@ -390,7 +382,6 @@ html, body {
 
 .tab-content.active { display: flex; flex-direction: column; }
 
-   MAPA
 .mapa {
   flex: 1;
   min-height: 0;
@@ -436,7 +427,6 @@ html, body {
   color: var(--text-secondary);
 }
 
-   LISTA DE BARES
 .descobrir-header {
   display: flex;
   align-items: center;
@@ -547,7 +537,6 @@ html, body {
   border-radius: var(--radius-full);
 }
 
-   BUSCA
 .busca-header {
   padding: 12px 16px;
   background: var(--bg);
@@ -605,7 +594,6 @@ html, body {
   font-size: 0.875rem;
 }
 
-   MODAL BAR
 .modal {
   position: fixed;
   inset: 0;
@@ -715,7 +703,6 @@ html, body {
   gap: 10px;
 }
 
-   BOTÕES
 .btn-primary {
   background: var(--amstel-red);
   color: white;
@@ -780,7 +767,6 @@ html, body {
   color: white;
 }
 
-   LOADING + EMPTY
 .loading {
   text-align: center;
   padding: 40px 20px;
@@ -800,7 +786,6 @@ html, body {
   animation: spin 0.8s linear infinite;
 }
 
-   TOAST
 .toast {
   position: fixed;
   bottom: calc(var(--tabs-h) + var(--safe-bottom) + 16px);
@@ -818,7 +803,6 @@ html, body {
   animation: fadeInOut 3s ease forwards;
 }
 
-   LEAFLET CUSTOMIZAÇÃO
 .leaflet-container {
   background: var(--bg-input);
   font-family: var(--font-body);
@@ -849,7 +833,6 @@ html, body {
   border-color: var(--amstel-red);
 }
 
-   ANIMAÇÕES
 @keyframes slideUp {
   from { transform: translateY(20px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
@@ -870,7 +853,87 @@ html, body {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
-   SCROLLBAR CUSTOMIZADA
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.header__menu {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.header__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.header__logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.header__location {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #C8102E;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.bottom-nav-wrap {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+}
+
+.tile-bar {
+  height: 44px;
+  width: 100%;
+  background-image: url('/logos/Azulejo Full.png');
+  background-size: auto 100%;
+  background-repeat: repeat-x;
+  background-position: center;
+}
+
+.mapa {
+  height: calc(100dvh - 56px - 44px - 60px) !important;
+}
+
+.main {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  padding-bottom: calc(60px + 44px + env(safe-area-inset-bottom, 0px));
+}
+
+[data-theme="dark"] .header__menu,
+[data-theme="dark"] .header__theme {
+  color: #B8A898;
+}
+
+@media (prefers-color-scheme: dark) {
+  .header__menu, .header__theme {
+    color: #B8A898;
+  }
+}

@@ -2,7 +2,7 @@
 // ============================================
 
 const CACHE = 'quarta-amstel-v1';
-const ASSETS = ['/', '/index.html', '/css/app.css', '/js/app.js', '/js/mapa.js', '/js/lista.js', '/js/push.js', '/manifest.json'];
+const ASSETS = ['/', '/index.html', '/css/app.css', '/js/app.js', '/js/mapa.js', '/js/lista.js', '/js/push.js', '/manifest.json', '/logos/Logo-256.png', '/logos/Logo-512.png', '/logos/Azulejo Full.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -44,8 +44,8 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(data.titulo, {
       body: data.mensagem,
-      icon: '/images/logo.png',
-      badge: '/images/badge.png',
+      icon: '/logos/Logo-256.png',
+      badge: '/logos/Logo-256.png',
       tag: 'amstel-push',
       renotify: true,
       requireInteraction: false,
