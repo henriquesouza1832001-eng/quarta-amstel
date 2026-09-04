@@ -1,5 +1,5 @@
 
-const VAPID_PUBLIC_KEY = BCyoC_7Z-zHzos_PMRsr42HKYyTfmOGCjuXJbzVh0khBFIGomoGptjntGP4Y85v2t32jxKjYb31BT46Us_nFxMo
+const VAPID_PUBLIC_KEY = BEtCI3-OkWZ7H6yDuwQl9EWaCgvK-wygfkSXLmAUxUuKRnMJ7jSNw34ZDLCy-QxDHIOVNafd4JTpJaPYUiHUlhs
 
 window._solicitarPush = async function (swReg) {
   if (!('PushManager' in window)) return;
@@ -29,7 +29,7 @@ window._solicitarPush = async function (swReg) {
         auth: subJson.keys?.auth,
         lat: window._userLat ? Math.round(window._userLat * 100) / 100 : null,
         lng: window._userLng ? Math.round(window._userLng * 100) / 100 : null,
-        cidade: 'Belo Horizonte', // será dinâmico com geocoding futuro
+        cidade: 'Belo Horizonte',
         estado: 'MG',
       }),
     });

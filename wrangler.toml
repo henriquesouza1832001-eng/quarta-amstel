@@ -6,16 +6,11 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "quartaamstel-db"
-database_id = "SUBSTITUIR_APOS_CRIAR"
-
-[[kv_namespaces]]
-binding = "KV"
-id = "SUBSTITUIR_APOS_CRIAR"
+database_id = "33325577-b8ec-4351-8096-8ea3ef511813"
 
 # Cron: toda quarta às 17h, 18h e 19h (horário de Brasília = UTC-3)
 # 17h BRT = 20h UTC | 18h BRT = 21h UTC | 19h BRT = 22h UTC
-[triggers]
-crons = ["0 20 * * 3", "0 21 * * 3", "0 22 * * 3"]
+
 
 [vars]
 ENVIRONMENT = "production"
