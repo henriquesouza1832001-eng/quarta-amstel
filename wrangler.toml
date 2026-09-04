@@ -1,0 +1,29 @@
+name = "quartaamstel-worker"
+main = "worker/index.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "quartaamstel-db"
+database_id = "SUBSTITUIR_APOS_CRIAR"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "SUBSTITUIR_APOS_CRIAR"
+
+# Cron: toda quarta às 17h, 18h e 19h (horário de Brasília = UTC-3)
+# 17h BRT = 20h UTC | 18h BRT = 21h UTC | 19h BRT = 22h UTC
+[triggers]
+crons = ["0 20 * * 3", "0 21 * * 3", "0 22 * * 3"]
+
+[vars]
+ENVIRONMENT = "production"
+
+# Secrets (definir via: wrangler secret put NOME --name quartaamstel-worker)
+# JWT_SECRET
+# VAPID_PUBLIC_KEY
+# VAPID_PRIVATE_KEY
+# RESEND_API_KEY
+# AES_KEY (para criptografar dados sensíveis)
+# ALERT_EMAIL

@@ -1,0 +1,19 @@
+{
+  "name": "Quarta é Dia de Amstel",
+  "short_name": "Quarta Amstel",
+  "description": "Encontre bares participantes da campanha Amstel perto de você.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#C8102E",
+  "background_color": "#0D0D0D",
+  "lang": "pt-BR",
+  "categories": ["food", "lifestyle"],
+  "icons": [
+    { "src": "/images/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/images/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [
+    { "src": "/images/screenshot.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow" }
+  ]
+}

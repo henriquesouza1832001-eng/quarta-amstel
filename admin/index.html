@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Admin — Quarta é Dia de Amstel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --red: #C8102E; --red-dk: #A00D24; --gold: #F5A623;
+      --bg: #F5F4F0; --bg-card: #fff; --bg-input: #F0EFEB;
+      --text: #1A1A1A; --text2: #5A5A5A; --text3: #9A9A9A;
+      --border: #E5E3DC; --radius: 12px;
+      --font-d: 'Barlow Condensed', sans-serif;
+      --font-b: 'Inter', sans-serif;
+    }
+    [data-theme="dark"] {
+      --bg:#0D0D0D;--bg-card:#1A1A1A;--bg-input:#222;
+      --text:#F5F4F0;--text2:#AAA;--text3:#666;--border:#2A2A2A;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:var(--font-b);background:var(--bg);color:var(--text);min-height:100vh;transition:background .2s,color .2s}
+    .hidden{display:none!important}
+
+    /* LOGIN */
+    .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+    .login-card{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:40px 32px;width:100%;max-width:380px;text-align:center}
+    .login-card h1{font-family:var(--font-d);font-size:1.8rem;font-weight:900;color:var(--red);margin-bottom:4px}
+    .login-card p{font-size:.8rem;color:var(--text3);margin-bottom:28px}
+    .field{margin-bottom:14px;text-align:left}
+    .field label{display:block;font-size:.75rem;font-weight:600;color:var(--text2);margin-bottom:5px}
+    .field input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--bg-input);color:var(--text);font-family:var(--font-b);font-size:.9rem;transition:border-color .15s}
+    .field input:focus{outline:none;border-color:var(--red)}
+    .btn{width:100%;padding:12px;border:none;border-radius:40px;font-family:var(--font-b);font-size:.9rem;font-weight:600;cursor:pointer;transition:background .15s}
+    .btn-r{background:var(--red);color:#fff}.btn-r:hover{background:var(--red-dk)}
+    .btn-g{background:var(--bg-input);color:var(--text2);border:1px solid var(--border)}.btn-g:hover{background:var(--border)}
+    .erro-msg{background:#FEE2E2;color:#B91C1C;border-radius:8px;padding:10px 14px;font-size:.8rem;margin-bottom:14px}
+
+    /* LAYOUT ADMIN */
+    .admin-layout{display:flex;min-height:100vh}
+    .sidebar{width:220px;background:var(--bg-card);border-right:1px solid var(--border);padding:20px 0;flex-shrink:0;display:flex;flex-direction:column}
+    .sidebar-logo{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:12px}
+    .sidebar-logo span{font-family:var(--font-d);font-size:1.2rem;font-weight:900;color:var(--red)}
+    .sidebar-logo small{display:block;font-size:.7rem;color:var(--text3)}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:.85rem;color:var(--text2);cursor:pointer;border-left:3px solid transparent;transition:all .15s}
+    .nav-item:hover{background:var(--bg-input);color:var(--text)}
+    .nav-item.active{color:var(--red);border-left-color:var(--red);background:rgba(200,16,46,.05)}
+    .nav-item svg{flex-shrink:0}
+    .sidebar-bottom{margin-top:auto;padding:12px 20px;border-top:1px solid var(--border)}
+    .sidebar-bottom button{background:none;border:none;font-family:var(--font-b);font-size:.8rem;color:var(--text3);cursor:pointer;display:flex;align-items:center;gap:6px}
+    .sidebar-bottom button:hover{color:var(--red)}
+    .admin-main{flex:1;overflow:auto;padding:28px}
+    .page{display:none}.page.active{display:block}
+
+    /* HEADER DO PAINEL */
+    .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+    .page-header h2{font-family:var(--font-d);font-size:1.8rem;font-weight:900;color:var(--text)}
+    .page-header-actions{display:flex;gap:10px}
+
+    /* STATS */
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:28px}
+    .stat-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+    .stat-card__val{font-family:var(--font-d);font-size:2rem;font-weight:900;color:var(--text)}
+    .stat-card__label{font-size:.72rem;color:var(--text3);margin-top:2px}
+
+    /* TABELA */
+    .table-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+    table{width:100%;border-collapse:collapse}
+    th{padding:12px 16px;text-align:left;font-size:.72rem;font-weight:600;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:12px 16px;font-size:.84rem;color:var(--text);border-bottom:1px solid var(--border)}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:var(--bg-input)}
+    .badge{display:inline-block;padding:3px 10px;border-radius:40px;font-size:.68rem;font-weight:600}
+    .badge-ok{background:rgba(22,163,74,.1);color:#16A34A}
+    .badge-pend{background:rgba(245,166,35,.1);color:#D97706}
+    .badge-off{background:var(--bg-input);color:var(--text3)}
+    .badge-ameaca{background:rgba(200,16,46,.1);color:var(--red)}
+    .td-actions{display:flex;gap:6px}
+    .btn-sm{padding:5px 12px;font-size:.75rem;border-radius:20px;border:none;cursor:pointer;font-family:var(--font-b);font-weight:600}
+    .btn-sm-r{background:var(--red);color:#fff}
+    .btn-sm-g{background:var(--bg-input);color:var(--text2);border:1px solid var(--border)}
+    .btn-sm-green{background:rgba(22,163,74,.1);color:#16A34A}
+
+    /* FILTROS */
+    .filters{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+    .filter-input{padding:8px 14px;border:1.5px solid var(--border);border-radius:40px;background:var(--bg-input);color:var(--text);font-family:var(--font-b);font-size:.84rem}
+    .filter-input:focus{outline:none;border-color:var(--red)}
+    .filter-select{padding:8px 14px;border:1.5px solid var(--border);border-radius:40px;background:var(--bg-input);color:var(--text);font-family:var(--font-b);font-size:.84rem;cursor:pointer}
+
+    /* PUSH */
+    .push-form{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;max-width:560px}
+    .push-form h3{font-family:var(--font-d);font-size:1.3rem;font-weight:900;margin-bottom:18px}
+    .push-aviso{background:rgba(200,16,46,.05);border:1px solid rgba(200,16,46,.2);border-radius:8px;padding:12px 16px;font-size:.8rem;color:var(--red);margin-bottom:18px}
+    .push-result{margin-top:16px;padding:14px;background:var(--bg-input);border-radius:var(--radius);font-size:.85rem}
+
+    /* SEGURANÇA */
+    .sec-mapa{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);height:300px;display:flex;align-items:center;justify-content:center;color:var(--text3);margin-bottom:20px}
+    .nivel-badge{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:600}
+    .nivel-1{color:var(--text3)}
+    .nivel-2{color:#D97706}
+    .nivel-3{color:var(--red)}
+
+    /* MODAL */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(2px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+    .modal-box{background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+    .modal-box h3{font-family:var(--font-d);font-size:1.4rem;font-weight:900;margin-bottom:18px}
+    .modal-actions{display:flex;gap:10px;margin-top:20px}
+    .modal-actions .btn{flex:1}
+
+    /* TOTP */
+    .totp-qr{background:white;padding:16px;border-radius:var(--radius);display:inline-block;margin:12px 0}
+    .totp-secret{font-family:monospace;font-size:.85rem;background:var(--bg-input);padding:10px 14px;border-radius:8px;letter-spacing:.1em;word-break:break-all}
+
+    /* IMPORT */
+    .import-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:40px;text-align:center;cursor:pointer;transition:border-color .15s}
+    .import-zone:hover,.import-zone.drag{border-color:var(--red)}
+    .import-zone p{color:var(--text3);font-size:.875rem}
+    .import-zone strong{color:var(--red)}
+    .import-result{margin-top:14px;padding:14px;background:var(--bg-input);border-radius:var(--radius);font-size:.82rem}
+
+    @media(max-width:768px){
+      .sidebar{display:none}
+      .admin-main{padding:16px}
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-view" class="login-wrap">
+  <div class="login-card">
+    <h1>AMSTEL ADMIN</h1>
+    <p>Quarta é Dia de Amstel — Painel de gestão</p>
+    <div id="login-erro" class="erro-msg hidden"></div>
+    <div id="step-login">
+      <div class="field"><label>Email</label><input type="email" id="l-email" placeholder="admin@email.com"></div>
+      <div class="field"><label>Senha</label><input type="password" id="l-senha" placeholder="••••••••"></div>
+      <button class="btn btn-r" onclick="_login()">Entrar</button>
+    </div>
+    <div id="step-totp" class="hidden">
+      <p style="margin-bottom:16px;font-size:.85rem;color:var(--text2)">Digite o código de 6 dígitos do Google Authenticator</p>
+      <div class="field"><label>Código 2FA</label><input type="number" id="l-totp" placeholder="000000" maxlength="6"></div>
+      <button class="btn btn-r" onclick="_loginTotp()">Verificar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN LAYOUT -->
+<div id="admin-view" class="admin-layout hidden">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span>🍺 AMSTEL ADMIN</span>
+      <small id="admin-nome-sidebar"></small>
+    </div>
+    <div class="nav-item active" onclick="_nav('dashboard')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" onclick="_nav('bares')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Bares
+    </div>
+    <div class="nav-item" onclick="_nav('preview')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      Preview Campanha
+    </div>
+    <div class="nav-item" onclick="_nav('push')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Enviar Push
+    </div>
+    <div class="nav-item" onclick="_nav('campanhas')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      Campanhas
+    </div>
+    <div class="nav-item" onclick="_nav('seguranca')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Segurança
+    </div>
+    <div class="nav-item" onclick="_nav('config')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M20 12h2M2 12h2M12 20v2M12 2v2"/></svg>
+      Configurações
+    </div>
+    <div class="sidebar-bottom">
+      <button onclick="_logout()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sair
+      </button>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="page active">
+      <div class="page-header">
+        <h2>Dashboard</h2>
+        <span id="dash-data" style="font-size:.82rem;color:var(--text3)"></span>
+      </div>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="stat-card__val" id="st-bares">—</div><div class="stat-card__label">Bares cadastrados</div></div>
+        <div class="stat-card"><div class="stat-card__val" id="st-aprovados">—</div><div class="stat-card__label">Aprovados / Publicados</div></div>
+        <div class="stat-card"><div class="stat-card__val" id="st-subs">—</div><div class="stat-card__label">Subscriptions push</div></div>
+        <div class="stat-card"><div class="stat-card__val" id="st-camp">—</div><div class="stat-card__label">Campanhas ativas</div></div>
+        <div class="stat-card"><div class="stat-card__val" id="st-push">—</div><div class="stat-card__label">Push enviados</div></div>
+        <div class="stat-card" style="border-color:rgba(200,16,46,.3)"><div class="stat-card__val" style="color:var(--red)" id="st-ameacas">—</div><div class="stat-card__label">Ameaças (24h)</div></div>
+      </div>
+      <p style="font-size:.8rem;color:var(--text3);margin-top:8px">Próximo push automático: toda quarta às 17h, 18h e 19h (horário de Brasília)</p>
+    </div>
+
+    <!-- BARES -->
+    <div id="page-bares" class="page">
+      <div class="page-header">
+        <h2>Bares</h2>
+        <div class="page-header-actions">
+          <button class="btn-sm btn-sm-g" onclick="_abrirImport()">📁 Importar CSV</button>
+          <button class="btn-sm btn-sm-r" onclick="_abrirModalBar()">+ Adicionar bar</button>
+        </div>
+      </div>
+      <div class="filters">
+        <input class="filter-input" placeholder="Buscar bar..." oninput="_filtrarBares(this.value)">
+        <select class="filter-select" onchange="_filtrarBaresPor(this.value)">
+          <option value="">Todos</option>
+          <option value="0">Pendentes aprovação</option>
+          <option value="1">Aprovados</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nome</th><th>Bairro</th><th>Cidade</th><th>Estado</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="bares-tbody"><tr><td colspan="6" style="text-align:center;color:var(--text3)">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PREVIEW CAMPANHA -->
+    <div id="page-preview" class="page">
+      <div class="page-header">
+        <h2>Preview da Campanha</h2>
+        <button class="btn-sm btn-sm-r" onclick="_carregarPreview()">↻ Atualizar</button>
+      </div>
+      <p style="font-size:.85rem;color:var(--text2);margin-bottom:20px">
+        Bares marcados como <strong>aprovados</strong> aparecem no app. Revise abaixo antes de publicar.
+      </p>
+      <div id="preview-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px"></div>
+    </div>
+
+    <!-- PUSH -->
+    <div id="page-push" class="page">
+      <div class="page-header"><h2>Enviar Push</h2></div>
+      <div class="push-form">
+        <h3>Nova notificação</h3>
+        <div class="push-aviso">⚠️ Esta ação enviará push para todos os usuários selecionados. Máximo 3 disparos por dia.</div>
+        <div class="field"><label>Título</label><input id="push-titulo" placeholder="🍺 Quarta é Dia de Amstel!"></div>
+        <div class="field"><label>Mensagem</label><input id="push-msg" placeholder="Chopp gelado por R$8 no bar mais próximo de você!"></div>
+        <div class="field">
+          <label>Filtrar por cidade (deixe vazio para todos)</label>
+          <input id="push-cidade" placeholder="Ex: Belo Horizonte">
+        </div>
+        <div class="field">
+          <label>Filtrar por estado (deixe vazio para todos)</label>
+          <input id="push-estado" placeholder="Ex: MG">
+        </div>
+        <div class="field">
+          <label>Confirmação de segurança</label>
+          <input id="push-confirm" placeholder="Digite: CONFIRMAR">
+        </div>
+        <button class="btn btn-r" onclick="_enviarPush()">Enviar push agora</button>
+        <div id="push-result" class="push-result hidden"></div>
+      </div>
+    </div>
+
+    <!-- CAMPANHAS -->
+    <div id="page-campanhas" class="page">
+      <div class="page-header">
+        <h2>Campanhas</h2>
+        <button class="btn-sm btn-sm-r" onclick="_abrirModalCampanha()">+ Nova campanha</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Título</th><th>Promoção</th><th>Bar</th><th>Cidade</th><th>Período</th><th>Status</th></tr></thead>
+          <tbody id="campanhas-tbody"><tr><td colspan="6" style="text-align:center;color:var(--text3)">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SEGURANÇA -->
+    <div id="page-seguranca" class="page">
+      <div class="page-header">
+        <h2>Segurança</h2>
+        <button class="btn-sm btn-sm-g" onclick="_carregarSec()">↻ Atualizar</button>
+      </div>
+      <div class="sec-mapa">
+        🌍 Mapa de acessos em tempo real<br>
+        <small style="font-size:.72rem;margin-top:6px;display:block">(integração futura com Cloudflare Analytics)</small>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn-sm btn-sm-g" onclick="_carregarLogs(1)">Todos</button>
+        <button class="btn-sm btn-sm-g" onclick="_carregarLogs(2)">Avisos</button>
+        <button class="btn-sm btn-sm-r" onclick="_carregarLogs(3)">Críticos</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Horário</th><th>Tipo</th><th>Nível</th><th>IP</th><th>País</th><th>Rota</th><th>Bloqueado</th></tr></thead>
+          <tbody id="sec-tbody"><tr><td colspan="7" style="text-align:center;color:var(--text3)">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+      <div style="margin-top:20px">
+        <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:900;margin-bottom:14px">IPs Bloqueados</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>IP</th><th>Motivo</th><th>Permanente</th><th>Expira</th><th>Ação</th></tr></thead>
+            <tbody id="blocked-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="page-config" class="page">
+      <div class="page-header"><h2>Configurações</h2></div>
+      <div style="display:grid;gap:20px;max-width:560px">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
+          <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:900;margin-bottom:16px">Sistema</h3>
+          <div id="config-list"></div>
+        </div>
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
+          <h3 style="font-family:var(--font-d);font-size:1.2rem;font-weight:900;margin-bottom:16px">Autenticação 2FA</h3>
+          <p style="font-size:.84rem;color:var(--text2);margin-bottom:14px">Configure o Google Authenticator para maior segurança no login.</p>
+          <div id="totp-status"></div>
+          <button class="btn btn-g" style="margin-top:12px" onclick="_setupTotp()">Configurar 2FA</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MODAL BAR -->
+<div id="modal-bar" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 id="modal-bar-titulo">Adicionar bar</h3>
+    <div class="field"><label>Nome *</label><input id="b-nome"></div>
+    <div class="field"><label>Endereço *</label><input id="b-end"></div>
+    <div class="field"><label>Bairro *</label><input id="b-bairro"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field"><label>Cidade *</label><input id="b-cidade" value="Belo Horizonte"></div>
+      <div class="field"><label>Estado *</label><input id="b-estado" value="MG" maxlength="2"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field"><label>Latitude *</label><input id="b-lat" type="number" step="any" placeholder="-19.9167"></div>
+      <div class="field"><label>Longitude *</label><input id="b-lng" type="number" step="any" placeholder="-43.9345"></div>
+    </div>
+    <div class="field"><label>Telefone</label><input id="b-tel" placeholder="(31) 9999-9999"></div>
+    <div class="field"><label>Horário</label><input id="b-hor" placeholder="Ter-Sáb 17h-00h"></div>
+    <div id="modal-bar-erro" class="erro-msg hidden"></div>
+    <div class="modal-actions">
+      <button class="btn btn-g" onclick="_fecharModalBar()">Cancelar</button>
+      <button class="btn btn-r" onclick="_salvarBar()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPORT -->
+<div id="modal-import" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3>Importar bares via CSV</h3>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:14px">
+      Faça upload de um arquivo CSV ou XLSX. Os bares importados ficam <strong>pendentes de aprovação</strong> até você revisar na aba Preview.
+    </p>
+    <a href="#" onclick="_downloadTemplate()" style="font-size:.8rem;color:var(--red);text-decoration:none;display:block;margin-bottom:14px">
+      📥 Baixar template CSV
+    </a>
+    <div class="import-zone" id="import-zone" onclick="document.getElementById('import-file').click()">
+      <p>Arraste o arquivo aqui ou <strong>clique para selecionar</strong></p>
+      <p style="margin-top:6px;font-size:.72rem">Formatos aceitos: .csv, .xlsx</p>
+      <input type="file" id="import-file" accept=".csv,.xlsx" style="display:none" onchange="_processarImport(this)">
+    </div>
+    <div id="import-result" class="import-result hidden"></div>
+    <div class="modal-actions">
+      <button class="btn btn-g" onclick="document.getElementById('modal-import').classList.add('hidden')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TOTP -->
+<div id="modal-totp" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3>Configurar 2FA</h3>
+    <p style="font-size:.84rem;color:var(--text2);margin-bottom:14px">1. Abra o Google Authenticator e escaneie o QR abaixo, ou digite o código manualmente.</p>
+    <div id="totp-qr-area" style="text-align:center"></div>
+    <p style="font-size:.84rem;color:var(--text2);margin:14px 0 8px">2. Digite o código gerado para confirmar:</p>
+    <div class="field"><input id="totp-confirm-code" placeholder="000000" maxlength="6" type="number"></div>
+    <div id="totp-erro" class="erro-msg hidden"></div>
+    <div class="modal-actions">
+      <button class="btn btn-g" onclick="document.getElementById('modal-totp').classList.add('hidden')">Cancelar</button>
+      <button class="btn btn-r" onclick="_confirmarTotp()">Ativar 2FA</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const WORKER = 'https://quartaamstel-worker.henriquesouza.workers.dev';
+let _token = localStorage.getItem('amstel_admin_token');
+let _adminData = null;
+
+async function _login() {
+  const email = document.getElementById('l-email').value;
+  const senha = document.getElementById('l-senha').value;
+  if (!email || !senha) return _erroLogin('Preencha todos os campos');
+
+  try {
+    const resp = await fetch(`${WORKER}/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, senha }),
+    });
+    const data = await resp.json();
+
+    if (data.requer_2fa) {
+      document.getElementById('step-login').classList.add('hidden');
+      document.getElementById('step-totp').classList.remove('hidden');
+      window._emailPendente = email;
+      window._senhaPendente = senha;
+      return;
+    }
+
+    if (!data.ok) return _erroLogin(data.erro || 'Credenciais inválidas');
+    _autenticar(data);
+  } catch { _erroLogin('Erro de conexão'); }
+}
+
+async function _loginTotp() {
+  const totp_token = document.getElementById('l-totp').value;
+  try {
+    const resp = await fetch(`${WORKER}/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: window._emailPendente, senha: window._senhaPendente, totp_token }),
+    });
+    const data = await resp.json();
+    if (!data.ok) return _erroLogin(data.erro || 'Código inválido');
+    _autenticar(data);
+  } catch { _erroLogin('Erro de conexão'); }
+}
+
+function _autenticar(data) {
+  _token = data.token;
+  _adminData = data.admin;
+  localStorage.setItem('amstel_admin_token', _token);
+  document.getElementById('login-view').classList.add('hidden');
+  document.getElementById('admin-view').classList.remove('hidden');
+  document.getElementById('admin-nome-sidebar').textContent = data.admin.nome;
+  document.getElementById('dash-data').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  _carregarStats();
+  _carregarBares();
+}
+
+function _erroLogin(msg) {
+  const el = document.getElementById('login-erro');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function _logout() {
+  localStorage.removeItem('amstel_admin_token');
+  location.reload();
+}
+
+async function _api(path, opts = {}) {
+  const resp = await fetch(`${WORKER}${path}`, {
+    ...opts,
+    headers: { 'Authorization': `Bearer ${_token}`, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  if (resp.status === 401) { _logout(); return null; }
+  return resp.json();
+}
+
+function _nav(page) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${page}`)?.classList.add('active');
+
+  if (page === 'bares') _carregarBares();
+  if (page === 'preview') _carregarPreview();
+  if (page === 'campanhas') _carregarCampanhas();
+  if (page === 'seguranca') _carregarSec();
+  if (page === 'config') _carregarConfig();
+}
+
+async function _carregarStats() {
+  const data = await _api('/admin/stats');
+  if (!data?.ok) return;
+  const s = data.stats;
+  document.getElementById('st-bares').textContent = s.bares?.total || 0;
+  document.getElementById('st-aprovados').textContent = s.bares?.aprovados || 0;
+  document.getElementById('st-subs').textContent = s.subscriptions?.total || 0;
+  document.getElementById('st-camp').textContent = s.campanhas?.total || 0;
+  document.getElementById('st-push').textContent = s.pushes_enviados || 0;
+  document.getElementById('st-ameacas').textContent = s.ameacas_24h || 0;
+}
+
+let _baresAdmin = [];
+
+async function _carregarBares() {
+  const data = await _api('/admin/bares');
+  if (!data?.ok) return;
+  _baresAdmin = data.bares;
+  _renderTabelaBares(_baresAdmin);
+}
+
+function _renderTabelaBares(bares) {
+  const tbody = document.getElementById('bares-tbody');
+  if (!bares.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3)">Nenhum bar cadastrado</td></tr>'; return; }
+  tbody.innerHTML = bares.map(b => `
+    <tr>
+      <td><strong>${b.nome}</strong></td>
+      <td>${b.bairro}</td>
+      <td>${b.cidade}</td>
+      <td>${b.estado}</td>
+      <td>
+        ${b.ativo ? '' : '<span class="badge badge-off">Inativo</span>'}
+        ${b.aprovado ? '<span class="badge badge-ok">Publicado</span>' : '<span class="badge badge-pend">Pendente</span>'}
+      </td>
+      <td>
+        <div class="td-actions">
+          ${!b.aprovado ? `<button class="btn-sm btn-sm-green" onclick="_aprovarBar('${b.id}')">✓ Aprovar</button>` : ''}
+          <button class="btn-sm btn-sm-g" onclick="_editarBar('${b.id}')">Editar</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function _filtrarBares(q) {
+  const filtrados = _baresAdmin.filter(b =>
+    b.nome.toLowerCase().includes(q.toLowerCase()) ||
+    b.bairro.toLowerCase().includes(q.toLowerCase())
+  );
+  _renderTabelaBares(filtrados);
+}
+
+function _filtrarBaresPor(aprovado) {
+  const filtrados = aprovado === '' ? _baresAdmin : _baresAdmin.filter(b => b.aprovado == aprovado);
+  _renderTabelaBares(filtrados);
+}
+
+async function _aprovarBar(id) {
+  if (!confirm('Publicar este bar na campanha?')) return;
+  await _api(`/admin/bares/${id}/aprovar`, { method: 'PUT' });
+  await _carregarBares();
+}
+
+function _abrirModalBar(id) {
+  document.getElementById('modal-bar').classList.remove('hidden');
+  document.getElementById('modal-bar-titulo').textContent = id ? 'Editar bar' : 'Adicionar bar';
+  ['b-nome','b-end','b-bairro','b-tel','b-hor','b-lat','b-lng'].forEach(f => document.getElementById(f).value = '');
+  document.getElementById('b-cidade').value = 'Belo Horizonte';
+  document.getElementById('b-estado').value = 'MG';
+  document.getElementById('modal-bar-erro').classList.add('hidden');
+  window._editandoBarId = id || null;
+}
+
+function _fecharModalBar() { document.getElementById('modal-bar').classList.add('hidden'); }
+
+function _editarBar(id) {
+  const bar = _baresAdmin.find(b => b.id === id);
+  if (!bar) return;
+  _abrirModalBar(id);
+  document.getElementById('b-nome').value = bar.nome;
+  document.getElementById('b-end').value = bar.endereco;
+  document.getElementById('b-bairro').value = bar.bairro;
+  document.getElementById('b-cidade').value = bar.cidade;
+  document.getElementById('b-estado').value = bar.estado;
+  document.getElementById('b-lat').value = bar.lat;
+  document.getElementById('b-lng').value = bar.lng;
+  document.getElementById('b-tel').value = bar.telefone || '';
+  document.getElementById('b-hor').value = bar.horario || '';
+}
+
+async function _salvarBar() {
+  const body = {
+    nome: document.getElementById('b-nome').value,
+    endereco: document.getElementById('b-end').value,
+    bairro: document.getElementById('b-bairro').value,
+    cidade: document.getElementById('b-cidade').value,
+    estado: document.getElementById('b-estado').value,
+    lat: parseFloat(document.getElementById('b-lat').value),
+    lng: parseFloat(document.getElementById('b-lng').value),
+    telefone: document.getElementById('b-tel').value,
+    horario: document.getElementById('b-hor').value,
+  };
+
+  if (!body.nome || !body.endereco || !body.bairro || !body.cidade || !body.estado || !body.lat || !body.lng) {
+    const el = document.getElementById('modal-bar-erro');
+    el.textContent = 'Preencha todos os campos obrigatórios';
+    el.classList.remove('hidden');
+    return;
+  }
+
+  const path = window._editandoBarId ? `/admin/bares/${window._editandoBarId}` : '/admin/bares';
+  const method = window._editandoBarId ? 'PUT' : 'POST';
+  const data = await _api(path, { method, body: JSON.stringify(body) });
+
+  if (!data?.ok) { document.getElementById('modal-bar-erro').textContent = data?.erro || 'Erro ao salvar'; return; }
+  _fecharModalBar();
+  _carregarBares();
+}
+
+async function _carregarPreview() {
+  const data = await _api('/admin/bares?aprovado=1');
+  const grid = document.getElementById('preview-grid');
+  if (!data?.ok || !data.bares.length) {
+    grid.innerHTML = '<p style="color:var(--text3)">Nenhum bar aprovado para exibição.</p>';
+    return;
+  }
+
+  grid.innerHTML = data.bares.map(b => `
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+      <div style="font-size:1.5rem;margin-bottom:8px">🍺</div>
+      <strong style="font-size:.95rem">${b.nome}</strong>
+      <div style="font-size:.78rem;color:var(--text2);margin-top:4px">${b.bairro} · ${b.cidade}, ${b.estado}</div>
+      <div style="font-size:.78rem;color:var(--text3);margin-top:2px">${b.endereco}</div>
+      ${b.horario ? `<div style="font-size:.75rem;color:var(--text3);margin-top:4px">⏰ ${b.horario}</div>` : ''}
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <span class="badge badge-ok">Publicado</span>
+        <span style="font-size:.7rem;color:var(--text3);padding:3px 0">${b.lat.toFixed(4)}, ${b.lng.toFixed(4)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function _enviarPush() {
+  const titulo = document.getElementById('push-titulo').value;
+  const mensagem = document.getElementById('push-msg').value;
+  const cidade = document.getElementById('push-cidade').value;
+  const estado = document.getElementById('push-estado').value;
+  const confirmacao = document.getElementById('push-confirm').value;
+  const result = document.getElementById('push-result');
+
+  result.classList.remove('hidden');
+  result.textContent = 'Enviando...';
+
+  const data = await _api('/admin/push/send', {
+    method: 'POST',
+    body: JSON.stringify({ titulo, mensagem, cidade: cidade || undefined, estado: estado || undefined, confirmacao }),
+  });
+
+  if (!data?.ok) { result.textContent = `❌ ${data?.erro || 'Erro ao enviar'}`; return; }
+  result.textContent = `✅ Enviado! ${data.enviados}/${data.total} entregues · ${data.falhas} falhas`;
+  document.getElementById('push-confirm').value = '';
+}
+
+async function _carregarCampanhas() {
+  const data = await _api('/admin/campanhas');
+  const tbody = document.getElementById('campanhas-tbody');
+  if (!data?.ok || !data.campanhas.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3)">Nenhuma campanha</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.campanhas.map(c => `
+    <tr>
+      <td><strong>${c.titulo}</strong></td>
+      <td style="font-size:.8rem">${c.promocao}</td>
+      <td style="font-size:.8rem">${c.bar_nome || 'Todos'}</td>
+      <td style="font-size:.8rem">${c.cidade || 'Nacional'}</td>
+      <td style="font-size:.78rem;color:var(--text3)">${c.inicio} → ${c.fim}</td>
+      <td><span class="badge ${c.ativo ? 'badge-ok' : 'badge-off'}">${c.ativo ? 'Ativa' : 'Inativa'}</span></td>
+    </tr>
+  `).join('');
+}
+
+function _abrirModalCampanha() { alert('Modal de criação de campanha — em breve'); }
+
+function _abrirImport() { document.getElementById('modal-import').classList.remove('hidden'); }
+
+function _downloadTemplate() {
+  const csv = 'nome,endereco,bairro,cidade,estado,lat,lng,telefone,horario,descricao\nBar Exemplo,Rua das Flores 123,Centro,Belo Horizonte,MG,-19.9167,-43.9345,(31)9999-9999,Ter-Sab 17h-00h,Bar participante da campanha';
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'template_bares_amstel.csv';
+  a.click();
+}
+
+async function _processarImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const result = document.getElementById('import-result');
+  result.classList.remove('hidden');
+  result.textContent = 'Processando arquivo...';
+
+  const text = await file.text();
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+  const bares = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(',');
+    const obj = {};
+    headers.forEach((h, idx) => obj[h] = cols[idx]?.trim() || '');
+    if (obj.nome && obj.lat && obj.lng) {
+      obj.lat = parseFloat(obj.lat);
+      obj.lng = parseFloat(obj.lng);
+      bares.push(obj);
+    }
+  }
+
+  if (!bares.length) { result.textContent = '❌ Nenhum bar válido encontrado no arquivo.'; return; }
+
+  const data = await _api('/admin/bares/import', { method: 'POST', body: JSON.stringify({ bares }) });
+  if (!data?.ok) { result.textContent = `❌ ${data?.erro || 'Erro no import'}`; return; }
+  result.textContent = `✅ ${data.inseridos} bares importados! Vá em "Preview Campanha" para aprovar.`;
+  if (data.erros?.length) result.textContent += `\n⚠️ ${data.erros.length} erro(s): ${data.erros.slice(0,3).join('; ')}`;
+  _carregarBares();
+}
+
+async function _carregarSec() {
+  _carregarLogs(1);
+  const blocked = await _api('/admin/security/blocked');
+  const tbody = document.getElementById('blocked-tbody');
+  if (!blocked?.blocked?.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3)">Nenhum IP bloqueado</td></tr>'; return; }
+  tbody.innerHTML = blocked.blocked.map(b => `
+    <tr>
+      <td><code>${b.ip}</code></td>
+      <td style="font-size:.8rem">${b.motivo}</td>
+      <td>${b.permanente ? '🔴 Permanente' : '⏳'}</td>
+      <td style="font-size:.78rem;color:var(--text3)">${b.expira_em || '—'}</td>
+      <td><button class="btn-sm btn-sm-g" onclick="_desbloquear('${b.ip}')">Desbloquear</button></td>
+    </tr>
+  `).join('');
+}
+
+async function _carregarLogs(nivel) {
+  const data = await _api(`/admin/security/logs?nivel=${nivel}&limite=50`);
+  const tbody = document.getElementById('sec-tbody');
+  if (!data?.logs?.length) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3)">Nenhum log</td></tr>'; return; }
+  const nivelLabel = { 1: '<span class="nivel-badge nivel-1">ℹ Info</span>', 2: '<span class="nivel-badge nivel-2">⚠️ Aviso</span>', 3: '<span class="nivel-badge nivel-3">🔴 Crítico</span>' };
+  tbody.innerHTML = data.logs.map(l => `
+    <tr>
+      <td style="font-size:.75rem;color:var(--text3);white-space:nowrap">${l.criado_em?.replace('T',' ').slice(0,16)}</td>
+      <td><span class="badge badge-ameaca" style="font-size:.68rem">${l.tipo}</span></td>
+      <td>${nivelLabel[l.nivel] || l.nivel}</td>
+      <td><code style="font-size:.8rem">${l.ip}</code></td>
+      <td>${l.pais || '—'}</td>
+      <td style="font-size:.78rem;color:var(--text3)">${l.rota || '—'}</td>
+      <td>${l.bloqueado ? '🔴 Sim' : '—'}</td>
+    </tr>
+  `).join('');
+}
+
+async function _desbloquear(ip) {
+  if (!confirm(`Desbloquear IP ${ip}?`)) return;
+  await _api(`/admin/security/blocked/${ip}`, { method: 'DELETE' });
+  _carregarSec();
+}
+
+async function _carregarConfig() {
+  const data = await _api('/admin/config');
+  const list = document.getElementById('config-list');
+  if (!data?.config) return;
+  list.innerHTML = data.config.map(c => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <label style="flex:1;font-size:.8rem;color:var(--text2)">${c.descricao || c.chave}</label>
+      <input style="width:140px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text);font-size:.82rem"
+        value="${c.valor}" onchange="_salvarConfig('${c.chave}', this.value)">
+    </div>
+  `).join('');
+}
+
+async function _salvarConfig(chave, valor) {
+  await _api(`/admin/config/${chave}`, { method: 'PUT', body: JSON.stringify({ valor }) });
+}
+
+async function _setupTotp() {
+  const data = await _api('/admin/totp/setup', { method: 'POST' });
+  if (!data?.ok) return;
+  document.getElementById('modal-totp').classList.remove('hidden');
+  document.getElementById('totp-qr-area').innerHTML = `
+    <div class="totp-secret">${data.secret}</div>
+    <p style="font-size:.75rem;color:var(--text3);margin-top:8px">
+      Cole esse código no Google Authenticator manualmente, ou use o link:<br>
+      <a href="${data.otpauth_url}" style="color:var(--red);font-size:.72rem;word-break:break-all">${data.otpauth_url}</a>
+    </p>
+  `;
+}
+
+async function _confirmarTotp() {
+  const token = document.getElementById('totp-confirm-code').value;
+  const data = await _api('/admin/totp/confirm', { method: 'POST', body: JSON.stringify({ token }) });
+  const erro = document.getElementById('totp-erro');
+  if (!data?.ok) { erro.textContent = data?.erro || 'Código inválido'; erro.classList.remove('hidden'); return; }
+  document.getElementById('modal-totp').classList.add('hidden');
+  alert('2FA ativado com sucesso! Use o Google Authenticator no próximo login.');
+}
+
+if (_token) {
+  document.getElementById('login-view').classList.add('hidden');
+  document.getElementById('admin-view').classList.remove('hidden');
+  document.getElementById('dash-data').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+  _carregarStats();
+  _carregarBares();
+}
+</script>
+</body>
+</html>
