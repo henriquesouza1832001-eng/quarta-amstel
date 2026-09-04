@@ -1,5 +1,5 @@
 
-const VAPID_PUBLIC_KEY = 'SUBSTITUIR_PELA_VAPID_PUBLIC_KEY';
+const VAPID_PUBLIC_KEY = BCyoC_7Z-zHzos_PMRsr42HKYyTfmOGCjuXJbzVh0khBFIGomoGptjntGP4Y85v2t32jxKjYb31BT46Us_nFxMo
 
 window._solicitarPush = async function (swReg) {
   if (!('PushManager' in window)) return;
