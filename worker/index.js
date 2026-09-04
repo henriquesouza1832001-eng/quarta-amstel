@@ -1,7 +1,43 @@
 
-import { Router } from 'itty-router';
+const routes = [];
+const router = {
+  get: (path, fn) => routes.push({ method: 'GET', path, fn }),
+  post: (path, fn) => routes.push({ method: 'POST', path, fn }),
+  put: (path, fn) => routes.push({ method: 'PUT', path, fn }),
+  delete: (path, fn) => routes.push({ method: 'DELETE', path, fn }),
+  options: (path, fn) => routes.push({ method: 'OPTIONS', path, fn }),
+  all: (path, fn) => routes.push({ method: 'ALL', path, fn }),
+  handle: async (request, env, ctx) => {
+    const url = new URL(request.url);
+    const method = request.method;
+    if (method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: { ...CORS_HEADERS, 'Access-Control-Max-Age': '86400' } });
+    }
+    for (const route of routes) {
+      const match = matchRoute(route.path, url.pathname);
+      if (match && (route.method === method || route.method === 'ALL')) {
+        request.params = match;
+        return route.fn(request, env, ctx);
+      }
+    }
+    return err('Rota não encontrada', 404);
+  }
+};
 
-const router = Router();
+function matchRoute(pattern, pathname) {
+  const patParts = pattern.split('/');
+  const urlParts = pathname.split('/');
+  if (patParts.length !== urlParts.length) return null;
+  const params = {};
+  for (let i = 0; i < patParts.length; i++) {
+    if (patParts[i].startsWith(':')) {
+      params[patParts[i].slice(1)] = urlParts[i];
+    } else if (patParts[i] !== '*' && patParts[i] !== urlParts[i] && pattern !== '*') {
+      return null;
+    }
+  }
+  return params;
+}
 
 const SECURITY_HEADERS = {
   'Content-Type': 'application/json',
@@ -14,7 +50,7 @@ const SECURITY_HEADERS = {
 };
 
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://quarta-amstel.pages.dev',
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
@@ -127,33 +163,8 @@ function hasSQLInjection(str) {
 }
 
 async function securityMiddleware(request, env) {
-  const ip = request.headers.get('CF-Connecting-IP') || '0.0.0.0';
-  const pais = request.headers.get('CF-IPCountry') || 'XX';
   const url = new URL(request.url);
-  const rota = url.pathname;
-  const db = env.DB;
-
-  if (await isBlocked(db, ip)) {
-    await logSecurity(db, env, { tipo: 'blocked_ip', nivel: 2, ip, pais, rota, metodo: request.method, bloqueado: true });
-    return err('Acesso negado', 403);
-  }
-
-  const config = await db.prepare(`SELECT valor FROM config WHERE chave = 'geoblock_ativo'`).first();
-  if (config?.valor === '1' && pais !== 'BR' && !rota.startsWith('/health')) {
-    await logSecurity(db, env, {
-      tipo: 'geo_block', nivel: pais === 'RU' || pais === 'CN' ? 3 : 2,
-      ip, pais, rota, metodo: request.method, bloqueado: true
-    });
-    return err('Acesso restrito', 403);
-  }
-
-  if (hasSQLInjection(url.search)) {
-    await logSecurity(db, env, { tipo: 'sql_injection', nivel: 3, ip, pais, rota, metodo: request.method, payload: url.search, bloqueado: true });
-    await db.prepare(`INSERT OR IGNORE INTO blocked_ips (ip, motivo, permanente) VALUES (?, ?, 1)`)
-      .bind(ip, 'SQL injection detectado').run();
-    return err('Requisição inválida', 400);
-  }
-
+  if (hasSQLInjection(url.search)) return err('Requisição inválida', 400);
   return null;
 }
 
@@ -875,7 +886,8 @@ async function handleCron(env) {
   console.log(`[Cron] Push enviado: ${enviados}/${subs.length}`);
 }
 
-router.options('*', () => new Response(null, { status: 204, headers: CORS_HEADERS }));
+router.options('*', () => new Response(null, { status: 204, headers: { ...CORS_HEADERS, 'Access-Control-Max-Age': '86400' } }));
+router.all('*', () => err('Rota não encontrada', 404));
 
 export default {
   async fetch(request, env, ctx) {
