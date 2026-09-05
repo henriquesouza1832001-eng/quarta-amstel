@@ -48,7 +48,7 @@ self.addEventListener('push', e => {
       badge: '/logos/Logo-256.png',
       tag: 'amstel-push',
       renotify: true,
-      requireInteraction: true,
+      requireInteraction: false,
       vibrate: [200, 100, 200],
       silent: false,
       data: { url: data.url || '/?push=1' },
