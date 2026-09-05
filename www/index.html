@@ -141,8 +141,16 @@
     <!-- TAB: DESCOBRIR (lista por distância) -->
     <section id="tab-descobrir" class="tab-content">
       <div class="descobrir-header">
-        <h2>Bares participantes</h2>
-        <span id="descobrir-total" class="badge-total"></span>
+        <h2>Bares perto de você</h2>
+        <p>Encontre os bares participantes da<br>Quarta é Dia de Amstel.</p>
+      </div>
+      <div class="busca-lista">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="busca-input" placeholder="Buscar bar, bairro ou região" oninput="window._buscar(this.value)">
+      </div>
+      <div class="filtros-row">
+        <button class="filtro-chip active" id="filtro-proximos" onclick="window._filtrar('proximos')">Mais próximos</button>
+        <button class="filtro-chip" id="filtro-abertos" onclick="window._filtrar('abertos')">Abertos agora</button>
       </div>
       <div id="lista-bares" class="lista-bares">
         <div class="loading">Carregando bares...</div>

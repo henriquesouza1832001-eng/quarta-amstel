@@ -414,18 +414,23 @@ html, body {
 }
 
 .descobrir-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 16px 8px;
+  padding: 20px 16px 12px;
 }
 
 .descobrir-header h2 {
   font-family: var(--font-display);
-  font-size: 1.4rem;
+  font-size: 2rem;
   font-weight: 900;
   color: var(--text-primary);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.descobrir-header p {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
 }
 
 .badge-total {
@@ -438,32 +443,37 @@ html, body {
 }
 
 .lista-bares {
-  padding: 8px 16px calc(16px + var(--safe-bottom));
+  padding: 0 16px calc(16px + var(--safe-bottom));
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
 }
 
 .bar-card {
   background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 16px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 14px 0;
   display: flex;
-  gap: 14px;
+  gap: 12px;
   cursor: pointer;
-  transition: box-shadow 0.15s, transform 0.1s;
+  transition: background 0.1s;
   -webkit-tap-highlight-color: transparent;
+  align-items: center;
+}
+
+.bar-card:first-child {
+  border-top: 1px solid var(--border);
 }
 
 .bar-card:active {
-  transform: scale(0.98);
-  box-shadow: var(--shadow);
+  background: var(--bg-input);
 }
 
 .bar-card__img {
-  width: 60px;
-  height: 60px;
+  width: 72px;
+  height: 72px;
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   object-fit: cover;
@@ -472,7 +482,8 @@ html, body {
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
-  font-size: 1.6rem;
+  font-size: 2rem;
+  overflow: hidden;
 }
 
 .bar-card__body {
@@ -511,17 +522,71 @@ html, body {
   color: var(--text-muted);
 }
 
-.bar-card__campanha {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(200, 16, 46, 0.1);
-  color: var(--amstel-red);
-  font-size: 0.68rem;
+.badge-total {
+  background: var(--amstel-red);
+  color: white;
+  font-size: 0.7rem;
   font-weight: 600;
-  padding: 3px 8px;
+  padding: 3px 9px;
   border-radius: var(--radius-full);
 }
+
+.filtros-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.filtros-row::-webkit-scrollbar { display: none; }
+
+.filtro-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border);
+  background: var(--bg-card);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.filtro-chip.active {
+  background: var(--amstel-red);
+  border-color: var(--amstel-red);
+  color: #fff;
+}
+
+.busca-lista {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 10px 16px;
+  margin: 12px 16px 8px;
+  transition: border-color 0.15s;
+}
+.busca-lista:focus-within { border-color: var(--amstel-red); }
+.busca-lista svg { color: var(--text-muted); flex-shrink: 0; }
+.busca-lista input {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+.busca-lista input::placeholder { color: var(--text-muted); }
 
 .busca-header {
   padding: 12px 16px;
@@ -1040,4 +1105,33 @@ html, body {
 @keyframes bounce {
   0%, 100% { transform: translateY(0); }
   50%       { transform: translateY(6px); }
+}
+.card-proximo__img {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+}
+
+.btn-ver-rota {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: #C8102E;
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-decoration: none;
+  flex-shrink: 0;
+  min-width: 72px;
+  text-align: center;
 }
