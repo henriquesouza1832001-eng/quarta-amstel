@@ -1,5 +1,5 @@
 
-const VAPID_PUBLIC_KEY = 'zj0DAQcDQgAEOLFfKqVzN2cLrxO0sVrTyBtaWA8cHvpgcpo91qNoDyaJJON5v9bOAqUyTTP0yd7vYPdmnB9R_PJaneh_JLmBzw';
+const VAPID_PUBLIC_KEY = 'BCEdJk_Afou5krlxgsxiUDrz4jw3mB1iy7PxKTvnavzn0awOhugF9m-HAJm1f2RWyXkuhtdB1kReM1tsG1hmyoE';
 
 window._solicitarPush = async function (swReg) {
   if (!('PushManager' in window)) return;
