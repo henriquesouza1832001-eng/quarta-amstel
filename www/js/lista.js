@@ -19,29 +19,59 @@ window._renderLista = function (bares) {
 function _renderCardBar(bar) {
   const distStr = bar.distancia_km != null
     ? bar.distancia_km < 1
-      ? `<span class="bar-card__dist">${Math.round(bar.distancia_km * 1000)}m de você</span>`
-      : `<span class="bar-card__dist">${bar.distancia_km.toFixed(1)}km de você</span>`
-    : '';
+      ? `${Math.round(bar.distancia_km * 1000)} m · ${bar.bairro}`
+      : `${bar.distancia_km.toFixed(1)} km · ${bar.bairro}`
+    : bar.bairro;
 
   const campanhaHtml = bar.campanha_ativa
-    ? `<span class="bar-card__campanha">🍺 ${bar.campanha_ativa.promocao}</span>`
+    ? `<div class="bar-card__campanha">🍺 ${bar.campanha_ativa.promocao}</div>`
     : '';
 
-  const emoji = _emojiBar(bar.nome);
+  const statusHtml = bar.horario
+    ? `<div class="bar-card__status">Aberto · ${bar.horario}</div>`
+    : '';
 
   return `
     <div class="bar-card" onclick="window._verBar('${bar.id}')">
-      <div class="bar-card__img">${emoji}</div>
+      <div class="bar-card__img">🍺</div>
       <div class="bar-card__body">
         <div class="bar-card__nome">${bar.nome}</div>
-        <div class="bar-card__endereco">${bar.bairro} · ${bar.cidade}</div>
-        <div class="bar-card__meta">
-          ${distStr}
-          ${campanhaHtml}
-        </div>
+        <div class="bar-card__endereco">${distStr}</div>
+        ${statusHtml}
+        ${campanhaHtml}
+      </div>
+      <div class="bar-card__actions">
+        <button class="bar-card__fav" onclick="event.stopPropagation()">♡</button>
+        <svg class="bar-card__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>
   `;
+}
+
+let _filtroAtivo = 'proximos';
+
+window._filtrar = function(filtro) {
+  _filtroAtivo = filtro;
+  document.querySelectorAll('.filtro-chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('filtro-' + filtro)?.classList.add('active');
+
+  let bares = window._bares || [];
+
+  if (filtro === 'abertos') {
+    bares = bares.filter(b => b.horario);
+  }
+
+  _renderListaFiltrada(bares);
+};
+
+function _renderListaFiltrada(bares) {
+  const lista = document.getElementById('lista-bares');
+  if (!lista) return;
+  if (!bares.length) {
+    lista.innerHTML = `<div class="loading" style="padding-top:40px">Nenhum bar encontrado.</div>`;
+    return;
+  }
+  lista.innerHTML = bares.map(bar => _renderCardBar(bar)).join('');
 }
 
 function _emojiBar(nome) {

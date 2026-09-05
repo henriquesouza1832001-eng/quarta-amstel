@@ -76,17 +76,26 @@ function _renderMarcadores(bares) {
 
     const pinIcon = L.divIcon({
       html: `<div style="
-        width:32px;height:32px;
-        background:${temCampanha ? '#F5A623' : '#C8102E'};
-        border:3px solid white;
+        width:40px;height:40px;
+        background:#C8102E;
+        border:2.5px solid white;
         border-radius:50% 50% 50% 0;
         transform:rotate(-45deg);
-        box-shadow:0 3px 10px rgba(${temCampanha ? '245,166,35' : '200,16,46'},0.5);
+        box-shadow:0 3px 12px rgba(200,16,46,0.5);
         cursor:pointer;
-      "></div>`,
-      iconSize: [32, 32],
-      iconAnchor: [16, 32],
-      popupAnchor: [0, -32],
+        display:flex;align-items:center;justify-content:center;
+        overflow:hidden;
+      ">
+        <img src="/logos/Logo-256.png" style="
+          width:28px;height:28px;
+          object-fit:contain;
+          transform:rotate(45deg);
+          border-radius:50%;
+        " onerror="this.style.display='none'">
+      </div>`,
+      iconSize: [40, 40],
+      iconAnchor: [20, 40],
+      popupAnchor: [0, -40],
       className: '',
     });
 
@@ -135,28 +144,25 @@ function _atualizarCardProximo(bar) {
   const card = document.getElementById('card-proximo');
   if (!card) return;
 
-  const hoje = new Date().getDay() === 3; // quarta
+  const d = bar.distancia_km;
+  const distStr = d != null
+    ? `${bar.bairro} · ${d < 1 ? Math.round(d * 1000) + 'm' : d.toFixed(1) + 'km'}`
+    : bar.bairro;
 
-  const badge = document.getElementById('prox-badge');
-  if (badge) badge.style.background = bar.campanha_ativa ? '#F5A623' : '#C8102E';
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${bar.lat},${bar.lng}`;
 
-  const nome = document.getElementById('prox-nome');
-  if (nome) nome.textContent = bar.nome;
-
-  const dist = document.getElementById('prox-distancia');
-  if (dist) {
-    const d = bar.distancia_km;
-    dist.textContent = d != null
-      ? `${bar.bairro} · ${d < 1 ? Math.round(d * 1000) + 'm' : d.toFixed(1) + 'km'} de você`
-      : bar.bairro;
-  }
-
-  const promo = document.getElementById('prox-promocao');
-  if (promo) {
-    promo.textContent = bar.campanha_ativa
-      ? `🍺 ${bar.campanha_ativa.promocao}`
-      : hoje ? 'Verifique as promoções de hoje' : '';
-  }
+  card.innerHTML = `
+    <div class="card-proximo__img">🍺</div>
+    <div class="card-proximo__info">
+      <strong id="prox-nome">${bar.nome}</strong>
+      <span>${distStr}</span>
+      ${bar.campanha_ativa ? `<span style="color:#C8102E;font-weight:700;font-size:0.78rem">🍺 ${bar.campanha_ativa.promocao}</span>` : ''}
+    </div>
+    <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn-ver-rota">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+      Ver rota
+    </a>
+  `;
 
   card.classList.remove('hidden');
 }
