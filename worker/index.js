@@ -763,6 +763,10 @@ router.put('/admin/config/:chave', async (request, env) => {
 // ── VAPID Push — RFC 8291 (aes128gcm) + RFC 8292
 // Compatível com: Chrome, Firefox, Edge, Safari, Android, iOS, Windows
 
+// ── VAPID Push — detecção automática de protocolo
+// aesgcm (legado) para fcm/send/ do Chrome Desktop
+// aes128gcm (RFC 8291) para todos os outros
+
 function b64u(buf) {
   return btoa(String.fromCharCode(...new Uint8Array(buf)))
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
@@ -772,7 +776,7 @@ function b64uDec(str) {
   return Uint8Array.from(atob(str.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
 }
 
-function concat(...arrays) {
+function concatBufs(...arrays) {
   const total = arrays.reduce((s, a) => s + a.length, 0);
   const out = new Uint8Array(total);
   let offset = 0;
@@ -791,7 +795,7 @@ async function hkdfExpand(prk, info, length) {
   let prev = new Uint8Array(0);
   let offset = 0;
   for (let i = 1; offset < length; i++) {
-    const combined = concat(prev, info, new Uint8Array([i]));
+    const combined = concatBufs(prev, info, new Uint8Array([i]));
     prev = new Uint8Array(await crypto.subtle.sign('HMAC', prkKey, combined));
     out.set(prev.slice(0, Math.min(prev.length, length - offset)), offset);
     offset += prev.length;
@@ -802,119 +806,120 @@ async function hkdfExpand(prk, info, length) {
 async function buildVapidToken(endpoint, vapidPrivateKeyB64, vapidPublicKeyB64) {
   const origin = new URL(endpoint).origin;
   const now = Math.floor(Date.now() / 1000);
-
   const header = b64u(new TextEncoder().encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
   const payload = b64u(new TextEncoder().encode(JSON.stringify({
-    aud: origin,
-    exp: now + 43200,
+    aud: origin, exp: now + 43200,
     sub: 'mailto:admin@quartaamstel.com.br',
   })));
-
   const data = `${header}.${payload}`;
-  const privBytes = b64uDec(vapidPrivateKeyB64);
   const ecKey = await crypto.subtle.importKey(
-    'pkcs8', privBytes,
+    'pkcs8', b64uDec(vapidPrivateKeyB64),
     { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']
   );
-  const sig = await crypto.subtle.sign(
-    { name: 'ECDSA', hash: 'SHA-256' },
-    ecKey,
-    new TextEncoder().encode(data)
-  );
-
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, ecKey, new TextEncoder().encode(data));
   return { token: `${data}.${b64u(sig)}`, pubKey: vapidPublicKeyB64 };
 }
 
-async function encryptPayload(payloadStr, p256dhB64, authB64) {
+// ── aes128gcm (RFC 8291) — moderno
+async function encryptAes128gcm(payloadStr, p256dhB64, authB64) {
   const recipientPublicKeyRaw = b64uDec(p256dhB64);
   const authSecret = b64uDec(authB64);
   const salt = crypto.getRandomValues(new Uint8Array(16));
-
-  const ephemeral = await crypto.subtle.generateKey(
-    { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']
-  );
-  const ephemeralPublicRaw = new Uint8Array(
-    await crypto.subtle.exportKey('raw', ephemeral.publicKey)
-  );
-
-  const recipientKey = await crypto.subtle.importKey(
-    'raw', recipientPublicKeyRaw,
-    { name: 'ECDH', namedCurve: 'P-256' }, false, []
-  );
-
-  const sharedBits = new Uint8Array(
-    await crypto.subtle.deriveBits(
-      { name: 'ECDH', public: recipientKey },
-      ephemeral.privateKey, 256
-    )
-  );
-
-  const prkInfoBuf = concat(
-    new TextEncoder().encode('WebPush: info\0'),
-    recipientPublicKeyRaw,
-    ephemeralPublicRaw
-  );
+  const ephemeral = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const ephemeralPublicRaw = new Uint8Array(await crypto.subtle.exportKey('raw', ephemeral.publicKey));
+  const recipientKey = await crypto.subtle.importKey('raw', recipientPublicKeyRaw, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const sharedBits = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: recipientKey }, ephemeral.privateKey, 256));
+  const prkInfoBuf = concatBufs(new TextEncoder().encode('WebPush: info\0'), recipientPublicKeyRaw, ephemeralPublicRaw);
   const prk = await hkdfExtract(authSecret, sharedBits);
   const ikm = await hkdfExpand(prk, prkInfoBuf, 32);
-
-  const cekInfo = new TextEncoder().encode('Content-Encoding: aes128gcm\0');
-  const nonceInfo = new TextEncoder().encode('Content-Encoding: nonce\0');
   const saltPrk = await hkdfExtract(salt, ikm);
-  const cek = await hkdfExpand(saltPrk, cekInfo, 16);
-  const nonce = await hkdfExpand(saltPrk, nonceInfo, 12);
-
+  const cek = await hkdfExpand(saltPrk, new TextEncoder().encode('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = await hkdfExpand(saltPrk, new TextEncoder().encode('Content-Encoding: nonce\0'), 12);
   const payloadBytes = new TextEncoder().encode(payloadStr);
   const padded = new Uint8Array(payloadBytes.length + 1);
   padded[0] = 2;
   padded.set(payloadBytes, 1);
-
   const aesKey = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
-  const encrypted = new Uint8Array(
-    await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, aesKey, padded)
-  );
-
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, aesKey, padded));
   const rs = encrypted.length + 16;
   const header = new Uint8Array(16 + 4 + 1 + ephemeralPublicRaw.length);
   header.set(salt, 0);
   new DataView(header.buffer).setUint32(16, rs, false);
   header[20] = ephemeralPublicRaw.length;
   header.set(ephemeralPublicRaw, 21);
+  return { body: concatBufs(header, encrypted), encoding: 'aes128gcm' };
+}
 
-  return { body: concat(header, encrypted) };
+// ── aesgcm (legado) — para fcm/send/ do Chrome Desktop
+async function encryptAesgcm(payloadStr, p256dhB64, authB64) {
+  const recipientPublicKeyRaw = b64uDec(p256dhB64);
+  const authSecret = b64uDec(authB64);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const ephemeral = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const ephemeralPublicRaw = new Uint8Array(await crypto.subtle.exportKey('raw', ephemeral.publicKey));
+  const recipientKey = await crypto.subtle.importKey('raw', recipientPublicKeyRaw, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const sharedBits = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: recipientKey }, ephemeral.privateKey, 256));
+  const prk = await hkdfExtract(authSecret, sharedBits);
+  const keyInfo = concatBufs(new TextEncoder().encode('Content-Encoding: aesgcm\0'), new Uint8Array(1), recipientPublicKeyRaw, ephemeralPublicRaw);
+  const nonceInfo = concatBufs(new TextEncoder().encode('Content-Encoding: nonce\0'), new Uint8Array(1), recipientPublicKeyRaw, ephemeralPublicRaw);
+  const cek = await hkdfExpand(prk, keyInfo, 16);
+  const nonce = await hkdfExpand(prk, nonceInfo, 12);
+  const payloadBytes = new TextEncoder().encode(payloadStr);
+  const padded = new Uint8Array(2 + payloadBytes.length);
+  padded.set(payloadBytes, 2);
+  const aesKey = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, aesKey, padded));
+  return {
+    body: encrypted,
+    encoding: 'aesgcm',
+    cryptoKey: `dh=${b64u(ephemeralPublicRaw)}`,
+    encryption: `salt=${b64u(salt)}`,
+  };
 }
 
 async function sendVapidPush(sub, payload, env) {
   try {
-    const { token, pubKey } = await buildVapidToken(
-      sub.endpoint,
-      env.VAPID_PRIVATE_KEY,
-      env.VAPID_PUBLIC_KEY
-    );
+    const { token, pubKey } = await buildVapidToken(sub.endpoint, env.VAPID_PRIVATE_KEY, env.VAPID_PUBLIC_KEY);
+    const isLegacy = sub.endpoint.includes('fcm.googleapis.com/fcm/send/');
 
-    const { body } = await encryptPayload(payload, sub.p256dh, sub.auth_key);
+    let body, headers;
 
-    const resp = await fetch(sub.endpoint, {
-      method: 'POST',
-      headers: {
+    if (isLegacy) {
+      const enc = await encryptAesgcm(payload, sub.p256dh, sub.auth_key);
+      body = enc.body;
+      headers = {
+        'Content-Type': 'application/octet-stream',
+        'Content-Encoding': 'aesgcm',
+        'Authorization': `WebPush ${token}`,
+        'Crypto-Key': `p256ecdsa=${pubKey};${enc.cryptoKey}`,
+        'Encryption': enc.encryption,
+        'TTL': '86400',
+      };
+    } else {
+      const enc = await encryptAes128gcm(payload, sub.p256dh, sub.auth_key);
+      body = enc.body;
+      headers = {
         'Content-Type': 'application/octet-stream',
         'Content-Encoding': 'aes128gcm',
         'Authorization': `vapid t=${token},k=${pubKey}`,
         'TTL': '86400',
-      },
-      body,
-    });
+      };
+    }
+
+    const resp = await fetch(sub.endpoint, { method: 'POST', headers, body });
 
     if (!resp.ok) {
       const txt = await resp.text().catch(() => '');
-      console.error(`[Push] ${resp.status} — ${txt.slice(0, 120)}`);
+      console.error(`[Push] ${resp.status} ${isLegacy ? 'legacy' : 'modern'} — ${txt.slice(0, 200)}`);
     }
 
-    return resp.status < 300;
+    return { success: resp.status < 300, expired: resp.status === 410 || resp.status === 404 };
   } catch (e) {
     console.error('[VAPID Push Error]', e.message);
-    return false;
+    return { success: false, expired: false };
   }
 }
+
 router.options('*', () => new Response(null, { status: 204, headers: { ...CORS_HEADERS, 'Access-Control-Max-Age': '86400' } }));
 router.all('*', () => err('Rota não encontrada', 404));
 
