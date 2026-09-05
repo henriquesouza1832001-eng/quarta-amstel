@@ -1,5 +1,13 @@
-
 const VAPID_PUBLIC_KEY = 'BCEdJk_Afou5krlxgsxiUDrz4jw3mB1iy7PxKTvnavzn0awOhugF9m-HAJm1f2RWyXkuhtdB1kReM1tsG1hmyoE';
+
+function _urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
 
 window._solicitarPush = async function (swReg) {
   if (!('PushManager' in window)) return;
@@ -10,6 +18,16 @@ window._solicitarPush = async function (swReg) {
     if (permissao !== 'granted') return;
 
     let sub = await swReg.pushManager.getSubscription();
+
+    // Migração: se endpoint é legado fcm/send/, força resubscrição
+    if (sub) {
+      const endpoint = sub.endpoint || '';
+      if (endpoint.includes('fcm.googleapis.com/fcm/send/')) {
+        console.log('[Push] Endpoint legado detectado, migrando...');
+        await sub.unsubscribe();
+        sub = null;
+      }
+    }
 
     if (!sub) {
       sub = await swReg.pushManager.subscribe({
@@ -34,17 +52,8 @@ window._solicitarPush = async function (swReg) {
       }),
     });
 
-    console.log('[Push] Subscription salva com sucesso');
+    console.log('[Push] Subscription salva:', sub.endpoint.slice(0, 60));
   } catch (e) {
     console.error('[Push] Erro:', e);
   }
 };
-
-function _urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-  return outputArray;
-}
