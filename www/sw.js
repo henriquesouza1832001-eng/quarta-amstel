@@ -48,7 +48,9 @@ self.addEventListener('push', e => {
       badge: '/logos/Logo-256.png',
       tag: 'amstel-push',
       renotify: true,
-      requireInteraction: false,
+      requireInteraction: true,
+      vibrate: [200, 100, 200],
+      silent: false,
       data: { url: data.url || '/?push=1' },
       actions: [{ action: 'ver', title: 'Ver bares' }],
     })
