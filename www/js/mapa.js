@@ -55,12 +55,12 @@ function _carregarTiles(dark) {
   }
 
   const url = dark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
+    : 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png';
 
   L.tileLayer(url, {
-    maxZoom: 19,
-    subdomains: 'abcd',
+    maxZoom: 20,
+    attribution: '© Stadia Maps © OpenMapTiles © OpenStreetMap',
   }).addTo(_mapa);
 }
 
