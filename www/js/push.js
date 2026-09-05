@@ -19,15 +19,7 @@ window._solicitarPush = async function (swReg) {
 
     let sub = await swReg.pushManager.getSubscription();
 
-    // Migração: se endpoint é legado fcm/send/, força resubscrição
-    if (sub) {
-      const endpoint = sub.endpoint || '';
-      if (endpoint.includes('fcm.googleapis.com/fcm/send/')) {
-        console.log('[Push] Endpoint legado detectado, migrando...');
-        await sub.unsubscribe();
-        sub = null;
-      }
-    }
+
 
     if (!sub) {
       sub = await swReg.pushManager.subscribe({

@@ -831,15 +831,16 @@ async function encryptWebPush(payloadStr, p256dhB64, authB64) {
 
   // Payload com delimiter
   const plain = new TextEncoder().encode(payloadStr);
+  if (plain.length > 3993) throw new Error(`Payload muito grande: ${plain.length} bytes (máx 3993)`);
   const padded = new Uint8Array(plain.length + 1);
-  padded[0] = 2;
-  padded.set(plain, 1);
+  padded.set(plain, 0);
+  padded[plain.length] = 0x02;
 
   const aesKey = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
   const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, aesKey, padded));
 
   // Header RFC 8291
-  const rs = encrypted.length + 16;
+  const rs = 4096;
   const header = new Uint8Array(16 + 4 + 1 + ephPub.length);
   header.set(salt, 0);
   new DataView(header.buffer).setUint32(16, rs, false);
