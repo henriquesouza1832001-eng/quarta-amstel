@@ -303,20 +303,7 @@ html, body {
 }
 
 .header__theme {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-secondary);
-  padding: 8px;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  transition: color 0.15s, background 0.15s;
-}
-
-.header__theme:hover {
-  background: var(--bg-input);
-  color: var(--text-primary);
+  display: none;
 }
 
 [data-theme="dark"] #icon-sun,
@@ -333,9 +320,10 @@ html, body {
 
 .tabs {
   display: flex;
-  background: var(--bg-tab);
-  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
   flex-shrink: 0;
+  height: 64px;
 }
 
 .tab {
@@ -344,25 +332,23 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 8px 4px;
-  height: var(--tabs-h);
+  gap: 4px;
+  padding: 8px 4px calc(8px + env(safe-area-inset-bottom, 0px));
   background: none;
   border: none;
   cursor: pointer;
   font-family: var(--font-body);
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: var(--text-muted);
-  border-bottom: 2.5px solid transparent;
-  transition: color 0.15s, border-color 0.15s;
+  transition: color 0.15s;
+  letter-spacing: 0.02em;
 }
 
 .tab svg { opacity: 0.5; transition: opacity 0.15s; }
 
 .tab.active {
   color: var(--amstel-red);
-  border-bottom-color: var(--amstel-red);
 }
 
 .tab.active svg { opacity: 1; }
@@ -908,7 +894,7 @@ html, body {
 }
 
 .tile-bar {
-  height: 44px;
+  height: 56px;
   width: 100%;
   background-image: url('/logos/Azulejo Full.png');
   background-size: auto 100%;
@@ -917,14 +903,14 @@ html, body {
 }
 
 .mapa {
-  height: calc(100dvh - 56px - 44px - 60px) !important;
+  height: calc(100dvh - 56px - 56px - 64px) !important;
 }
 
 .main {
   flex: 1;
   overflow: hidden;
   position: relative;
-  padding-bottom: calc(60px + 44px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(64px + 56px + env(safe-area-inset-bottom, 0px));
 }
 
 [data-theme="dark"] .header__menu,
