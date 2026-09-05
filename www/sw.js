@@ -46,7 +46,7 @@ self.addEventListener('push', e => {
       body: data.mensagem,
       icon: '/logos/Logo-256.png',
       badge: '/logos/Logo-256.png',
-      tag: 'amstel-push',
+      tag: `amstel-push-${Date.now()}`,
       renotify: true,
       requireInteraction: false,
       vibrate: [200, 100, 200],
