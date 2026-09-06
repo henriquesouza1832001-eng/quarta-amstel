@@ -445,25 +445,33 @@ html, body {
 }
 
 @media (min-width: 768px) {
+  #tab-descobrir {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: var(--amstel-cream);
+  }
+
   .descobrir-header,
   .busca-lista-wrap,
   .filtros-row,
   .lista-bares {
-    max-width: 860px;
-    margin-left: auto;
-    margin-right: auto;
     width: 100%;
+    max-width: 860px;
   }
+
+  .descobrir-header {
+    padding: 28px var(--page-padding-tablet) 8px;
+  }
+
   .busca-lista-wrap {
     padding-left: var(--page-padding-tablet);
     padding-right: var(--page-padding-tablet);
   }
+
   .filtros-row {
     padding-left: var(--page-padding-tablet);
     padding-right: var(--page-padding-tablet);
-  }
-  .descobrir-header {
-    padding: 28px var(--page-padding-tablet) 8px;
   }
 }
 
@@ -474,13 +482,16 @@ html, body {
   .lista-bares {
     max-width: 1100px;
   }
+
   .descobrir-header {
     padding: 32px var(--page-padding-desktop) 12px;
   }
+
   .busca-lista-wrap {
     padding-left: var(--page-padding-desktop);
     padding-right: var(--page-padding-desktop);
   }
+
   .filtros-row {
     padding-left: var(--page-padding-desktop);
     padding-right: var(--page-padding-desktop);
