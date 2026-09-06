@@ -58,10 +58,14 @@ window._tentarLocNovamente = function () {
 };
 
 window._initMapa = function (loc) {
+  if (_mapa) {
+    _esconderLoadingMapa();
+    return;
+  }
+
   const locValida = (l) => l && !isNaN(parseFloat(l.lat)) && !isNaN(parseFloat(l.lng));
   const locEfetiva = locValida(loc) ? loc
     : (window._locationState?.coords || window._locSalvaRecente || null);
-
 
   _userLoc = locEfetiva;
 
