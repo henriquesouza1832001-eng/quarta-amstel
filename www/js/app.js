@@ -191,6 +191,9 @@ function _detectarPlataforma() {
 }
 
 window._abrirSeletorRota = function (lat, lng, nome) {
+  document.getElementById('modal-bar')?.classList.add('hidden');
+  document.body.style.overflow = 'hidden';
+
   const { isIOS, isAndroid } = _detectarPlataforma();
 
   const mapsWeb = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;

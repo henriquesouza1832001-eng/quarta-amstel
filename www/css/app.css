@@ -1377,6 +1377,7 @@ html, body {
 
 /* ── Botão localizar ── */
 .mapa-btn-localizar {
+  z-index:10;
   position: absolute;
   bottom: 120px;
   right: var(--page-padding-mobile);
@@ -1632,10 +1633,11 @@ html, body {
   padding: 0;
   border-radius: 20px 20px 0 0;
   position: fixed;
-  bottom: 0;
+  bottom: calc(var(--bottom-nav-height, 64px) + clamp(26px, 3.2vh, 32px));
   left: 0;
   right: 0;
   max-width: 100%;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.12);
 }
 
 .rota-header {
