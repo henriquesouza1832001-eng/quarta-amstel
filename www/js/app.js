@@ -186,10 +186,11 @@ window._carregarBares = async function () {
 
 window._mudarTab = function (tab) {
   if (tab === 'mapa') {
-    if (window._initMapa && !_mapa) {
+    if (!window._mapa) {
       window._initMapa(window._userLoc || null);
+    } else {
+      window._onMapaAtivado && window._onMapaAtivado();
     }
-    if (window._onMapaAtivado) window._onMapaAtivado();
   }
   document.querySelectorAll('.nav-item').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tab}`));
@@ -279,7 +280,6 @@ async function _iniciarApp() {
   }
 
   window._userLoc = loc;
-  if (window._initMapa) requestAnimationFrame(() => window._initMapa(loc));
 
   setTimeout(async () => {
     if (window._solicitarPush && swReg) {
