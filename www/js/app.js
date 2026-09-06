@@ -185,7 +185,12 @@ window._carregarBares = async function () {
 };
 
 window._mudarTab = function (tab) {
-  if (tab === 'mapa' && window._onMapaAtivado) window._onMapaAtivado();
+  if (tab === 'mapa') {
+    if (window._initMapa && !_mapa) {
+      window._initMapa(window._userLoc || null);
+    }
+    if (window._onMapaAtivado) window._onMapaAtivado();
+  }
   document.querySelectorAll('.nav-item').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tab}`));
 };
@@ -258,27 +263,22 @@ window._toast = function (msg) {
 
 async function _iniciarApp() {
   document.getElementById('app')?.classList.remove('hidden');
+  window._mudarTab('descobrir');
 
   const swReg = await _registrarSW();
 
-  const loc = await _pedirLocalizacao();
-
   if (window._renderLista) window._renderLista([], 'loading');
 
-  let bares = [];
-  try {
-    bares = await window._carregarBares();
-  } catch {
-    if (window._renderLista) {
-      window._renderLista([], navigator.onLine ? 'erro' : 'sem-internet');
-    }
-  }
+  const [loc, bares] = await Promise.all([
+    _pedirLocalizacao(),
+    window._carregarBares().catch(() => []),
+  ]);
 
   if (window._renderLista) {
-    window._renderLista(bares, loc ? undefined : 'localizacao-negada');
+    window._renderLista(bares, bares.length ? undefined : (loc ? undefined : 'localizacao-negada'));
   }
 
-  if (window._initMapa) window._initMapa(loc);
+  if (window._initMapa) requestAnimationFrame(() => window._initMapa(loc));
 
   setTimeout(async () => {
     if (window._solicitarPush && swReg) {
