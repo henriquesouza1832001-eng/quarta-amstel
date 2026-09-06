@@ -168,16 +168,20 @@ window._carregarBares = async function () {
 };
 
 window._mudarTab = function (tab) {
+  // Muda a tab PRIMEIRO para o container ter dimensões
+  document.querySelectorAll('.nav-item').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tab}`));
+
   if (tab === 'mapa') {
     if (window._mapa) {
       window._onMapaAtivado && window._onMapaAtivado();
     } else {
-      const loc = window._locationState?.coords || window._locSalvaRecente || window._userLoc || null;
-      window._initMapa(loc);
+      requestAnimationFrame(() => {
+        const loc = window._locationState?.coords || window._locSalvaRecente || window._userLoc || null;
+        window._initMapa(loc);
+      });
     }
   }
-  document.querySelectorAll('.nav-item').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tab}`));
 };
 window._verBar = function (id) {
   const bar = window._bares.find(b => b.id === id);
