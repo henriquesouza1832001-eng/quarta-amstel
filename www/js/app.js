@@ -258,42 +258,36 @@ async function _iniciarApp() {
   const swReg = await _registrarSW();
 
   if (window._renderLista) window._renderLista([], 'loading');
+
   if (window._iniciarGeolocalizacao) {
     window._iniciarGeolocalizacao();
   }
+
   if (window._onLocationState) {
-    window._onLocationState(function (state) {
+    window._onLocationState(async function (state) {
       if (state.status === 'ready' && state.coords) {
+        // GPS confirmado — agora carrega bares com coordenadas
+        const bares = await window._carregarBares().catch(() => []);
+        window._bares = bares;
+
+        if (window._renderLista) window._renderLista(bares);
+
         if (window._mapa) {
-          // Mapa já aberto — centraliza silenciosamente
           window._mapa.flyTo([state.coords.lat, state.coords.lng], 13, { animate: true, duration: 0.6 });
           if (window._renderUserMarker) window._renderUserMarker(state.coords);
-          if (window._bares?.length && window._renderMarcadoresMapa) {
-            window._renderMarcadoresMapa(window._bares);
+          if (bares.length && window._renderMarcadoresMapa) {
+            window._renderMarcadoresMapa(bares);
           }
         }
-        if (window._bares?.length && window._renderLista) {
-          window._renderLista(window._bares);
-        }
       } else if (state.status === 'denied' || state.status === 'error') {
-        if (window._mapaAguardandoLoc) {
-          window._setLoadingErro && window._setLoadingErro(state.status);
-        }
+        // Sem GPS — carrega bares sem coordenadas
+        const bares = await window._carregarBares().catch(() => []);
+        window._bares = bares;
         if (window._renderLista) {
-          window._renderLista(window._bares || [], 'localizacao-negada');
+          window._renderLista(bares, 'localizacao-negada');
         }
       }
     });
-  }
-  const bares = await window._carregarBares().catch(() => []);
-  window._bares = bares;
-
-  if (window._renderLista) {
-    const state = window._locationState;
-    const status = state?.status === 'ready' ? undefined
-      : state?.status === 'denied' ? 'localizacao-negada'
-      : undefined;
-    window._renderLista(bares, status);
   }
 
   setTimeout(async () => {

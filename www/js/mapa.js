@@ -85,8 +85,9 @@ window._initMapa = function (loc) {
   _carregarTiles(isDark);
 
   if (locEfetiva) _renderUserMarker(locEfetiva);
-
-  _renderMarcadores(window._bares || []);
+  if (window._bares?.length && window._locationState?.status === 'ready') {
+    _renderMarcadores(window._bares);
+  }
 
   const observer = new MutationObserver(() => {
     const dark = document.documentElement.getAttribute('data-theme') === 'dark';
