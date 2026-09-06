@@ -1,0 +1,223 @@
+/* ── LOADING AMSTEL — Quarta é Dia de Amstel ── */
+
+.map-location-loading {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: clamp(60px, 12vh, 100px);
+  opacity: 1;
+  transition: opacity 0.28s ease;
+}
+
+.map-location-loading.saindo {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.map-location-loading.hidden {
+  display: none;
+}
+
+/* ── FUNDO ── */
+.map-location-loading__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+}
+
+.map-location-loading__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.22);
+  z-index: 1;
+}
+
+/* ── STAGE DO COPO ── */
+.amstel-glass-stage {
+  position: relative;
+  width: clamp(140px, 28vw, 220px);
+  aspect-ratio: 3 / 4.2;
+  z-index: 2;
+  margin-bottom: clamp(12px, 2.5vh, 20px);
+  /* Copo apoiado na mesa — empurra o conjunto para baixo */
+  transform: translateY(clamp(0px, 4vh, 24px));
+}
+
+/* ── MÁSCARA DA CERVEJA (interior do copo) ── */
+.amstel-beer-mask {
+  position: absolute;
+  left: 11%;
+  right: 11%;
+  bottom: 9%;
+  height: 80%;
+  overflow: hidden;
+  border-radius: 2px 2px 12px 12px;
+  z-index: 1;
+}
+
+/* ── CONJUNTO CERVEJA + ESPUMA (sobem juntos) ── */
+.amstel-beer-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  transform: translateY(100%);
+  animation: beer-rise 7s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .amstel-beer-fill {
+    animation: beer-rise-reduced 0.4s ease forwards;
+  }
+}
+
+/* ── CERVEJA ── */
+.amstel-beer-liquid {
+  flex: 1;
+  background: linear-gradient(
+    90deg,
+    #b86d00 0%,
+    #d98a08 20%,
+    #f0a918 45%,
+    #d98a08 72%,
+    #b86d00 100%
+  );
+  position: relative;
+}
+
+/* Reflexo interno da luz */
+.amstel-beer-liquid::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 18%;
+  width: 8%;
+  background: rgba(255, 220, 100, 0.22);
+  border-radius: 4px;
+}
+
+/* ── ESPUMA (fica no topo do conjunto) ── */
+.amstel-foam {
+  width: 82%;
+  align-self: center;
+  display: block;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+  margin-bottom: -2px; /* sela espuma com líquido */
+}
+
+/* ── VIDRO (na frente de tudo) ── */
+.amstel-glass-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* ── LOGO NO COPO ── */
+.amstel-glass-logo {
+  position: absolute;
+  width: 44%;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  pointer-events: none;
+}
+
+/* ── TEXTO ── */
+.map-location-loading__text {
+  position: relative;
+  z-index: 2;
+  font-family: var(--font-heading, 'Anton', sans-serif);
+  font-size: clamp(0.8rem, 2.2vw, 1rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 245, 220, 0.92);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+
+/* ── ESTADO DE ERRO ── */
+.map-location-loading__error {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.map-location-loading__error-text {
+  font-family: var(--font-body, sans-serif);
+  font-size: clamp(0.85rem, 2.5vw, 1rem);
+  color: rgba(255, 245, 220, 0.9);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  line-height: 1.5;
+}
+
+.map-location-loading__error-btn {
+  background: var(--amstel-red, #C8102E);
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  padding: 10px 28px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+
+.map-location-loading__error-btn:hover {
+  background: #a50d26;
+}
+
+/* ── KEYFRAMES ── */
+@keyframes beer-rise {
+  0%   { transform: translateY(100%); }
+  8%   { transform: translateY(95%); }
+  100% { transform: translateY(25%); }
+}
+
+@keyframes beer-rise-reduced {
+  0%   { transform: translateY(100%); }
+  100% { transform: translateY(25%); }
+}
+
+/* ── RESPONSIVO ── */
+@media (min-width: 768px) {
+  .amstel-glass-stage {
+    width: clamp(180px, 22vw, 220px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .amstel-glass-stage {
+    width: 220px;
+  }
+  .map-location-loading {
+    padding-bottom: clamp(80px, 14vh, 120px);
+  }
+}
