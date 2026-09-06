@@ -6,7 +6,8 @@
   --bg-input: var(--surface-soft);
   --border:   #e8e4da;
   --radius-full: var(--radius-pill);
-  --amstel-red: var(--amstel-red, #cf001c);
+  --amstel-red: #cf001c;
+  --amstel-red-dark: #b50018;
   --font-display: var(--font-brand);
   --font-body:    var(--font-ui);
   --header-h: var(--header-height);
@@ -343,13 +344,13 @@ html, body {
 }
 
 .azulejo-bar {
-  height: var(--azulejo-height);
   width: 100%;
+  height: clamp(26px, 3.2vh, 32px);
   background-image: url('/logos/Azulejo Full.png');
   background-size: auto 100%;
   background-repeat: repeat-x;
   background-position: center;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  flex-shrink: 0;
 }
 
 .nav-item {
