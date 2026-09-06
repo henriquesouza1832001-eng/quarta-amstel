@@ -263,11 +263,22 @@ async function _iniciarApp() {
 
   const loc = await _pedirLocalizacao();
 
-  const bares = await window._carregarBares();
+  if (window._renderLista) window._renderLista([], 'loading');
+
+  let bares = [];
+  try {
+    bares = await window._carregarBares();
+  } catch {
+    if (window._renderLista) {
+      window._renderLista([], navigator.onLine ? 'erro' : 'sem-internet');
+    }
+  }
 
   if (window._initMapa) window._initMapa(loc);
 
-  if (window._renderLista) window._renderLista(bares);
+  if (window._renderLista) {
+    window._renderLista(bares, loc ? undefined : 'localizacao-negada');
+  }
 
   setTimeout(async () => {
     if (window._solicitarPush && swReg) {

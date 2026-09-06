@@ -1248,6 +1248,83 @@ html, body {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
 
+/* ── Estados vazios ── */
+.estado-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 48px var(--page-padding-mobile) 32px;
+  gap: 12px;
+}
+
+.estado-icon {
+  width: 64px;
+  height: 64px;
+  color: var(--text-muted);
+  opacity: 0.5;
+  margin-bottom: 4px;
+}
+
+.estado-titulo {
+  font-family: var(--font-brand);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.estado-txt {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 28ch;
+}
+
+.estado-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--amstel-red);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 8px;
+}
+
+.estado-btn-pri {
+  margin-top: 4px;
+  padding: 11px 24px;
+  background: var(--amstel-red);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.estado-btn-pri:hover { background: var(--amstel-red-dark); }
+
+.estado-btn-sec {
+  padding: 10px 24px;
+  background: transparent;
+  color: var(--amstel-red);
+  border: 1.5px solid var(--amstel-red);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.estado-btn-sec:hover {
+  background: var(--amstel-red);
+  color: #fff;
+}
+
 /* ── iOS Install Banner ── */
 #ios-install-banner {
   position: fixed;
