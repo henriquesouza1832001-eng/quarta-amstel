@@ -328,6 +328,19 @@
       </main>
     </div>
 
+    <!-- MODAL SELETOR DE ROTA -->
+    <div id="modal-rota" class="modal hidden">
+      <div class="modal__backdrop" onclick="window._fecharModalRota()"></div>
+      <div class="modal__content modal__content--rota">
+        <div class="rota-header">
+          <span>Como quer ir?</span>
+          <button class="modal__close" onclick="window._fecharModalRota()">✕</button>
+        </div>
+        <div class="rota-destino" id="modal-rota-nome"></div>
+        <div class="rota-opcoes" id="modal-rota-opcoes"></div>
+      </div>
+    </div>
+
     <!-- MODAL BAR -->
     <div id="modal-bar" class="modal hidden">
       <div class="modal__backdrop" onclick="window._fecharModal()"></div>

@@ -183,6 +183,59 @@ window._mudarTab = function (tab) {
     }
   }
 };
+function _detectarPlataforma() {
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(ua);
+  return { isIOS, isAndroid };
+}
+
+window._abrirSeletorRota = function (lat, lng, nome) {
+  const { isIOS, isAndroid } = _detectarPlataforma();
+
+  const mapsWeb = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  const mapsDeep = `comgooglemaps://?daddr=${lat},${lng}&directionsmode=driving`;
+  const wazeDeep = `waze://?ll=${lat},${lng}&navigate=yes`;
+  const wazeWeb = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
+  const appleUrl = `maps://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
+
+  const modal = document.getElementById('modal-rota');
+  if (!modal) return;
+
+  const opcoes = isIOS ? [
+    { label: 'Apple Maps', icon: '🗺️', deep: appleUrl, web: appleUrl },
+    { label: 'Google Maps', icon: '📍', deep: mapsDeep, web: mapsWeb },
+    { label: 'Waze', icon: '🚗', deep: wazeDeep, web: wazeWeb },
+  ] : [
+    { label: 'Google Maps', icon: '📍', deep: mapsDeep, web: mapsWeb },
+    { label: 'Waze', icon: '🚗', deep: wazeDeep, web: wazeWeb },
+  ];
+
+  document.getElementById('modal-rota-nome').textContent = nome;
+  document.getElementById('modal-rota-opcoes').innerHTML = opcoes.map(op => `
+    <button class="rota-opcao" onclick="window._abrirApp('${op.deep}', '${op.web}')">
+      <span class="rota-opcao__icon">${op.icon}</span>
+      <span class="rota-opcao__label">${op.label}</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  `).join('');
+
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+};
+
+window._abrirApp = function (deep, web) {
+  // Tenta deeplink, fallback para web após 1.5s
+  window.location.href = deep;
+  setTimeout(() => { window.open(web, '_blank'); }, 1500);
+  window._fecharModalRota();
+};
+
+window._fecharModalRota = function () {
+  document.getElementById('modal-rota')?.classList.add('hidden');
+  document.body.style.overflow = '';
+};
+
 window._verBar = function (id) {
   const bar = window._bares.find(b => b.id === id);
   if (!bar) return;
@@ -203,23 +256,28 @@ window._verBar = function (id) {
     </div>
   ` : '';
 
-  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${bar.lat},${bar.lng}`;
-  const wazeUrl = `https://waze.com/ul?ll=${bar.lat},${bar.lng}&navigate=yes`;
+  const fotoHtml = bar.foto_url
+    ? `<div class="bar-detail__foto"><img src="${bar.foto_url}" alt="${bar.nome}" onerror="this.parentElement.innerHTML='<div class=bar-detail__foto-placeholder></div>'"></div>`
+    : `<div class="bar-detail__foto"><div class="bar-detail__foto-placeholder"></div></div>`;
+
+  const statusHtml = bar.horario
+    ? `<div class="bar-detail__info-item">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>${bar.horario}</span>
+      </div>`
+    : '';
 
   content.innerHTML = `
+    ${fotoHtml}
     <div class="bar-detail__nome">${bar.nome}</div>
-    <div class="bar-detail__bairro">${bar.bairro} · ${bar.cidade}, ${bar.estado}</div>
+    <div class="bar-detail__bairro">${bar.bairro} · ${bar.cidade}, ${bar.estado}${distStr ? ` · ${distStr}` : ''}</div>
     ${campanhaHtml}
     <div class="bar-detail__info">
       <div class="bar-detail__info-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        <span>${bar.endereco}${distStr ? ` · ${distStr}` : ''}</span>
+        <span>${bar.endereco}</span>
       </div>
-      ${bar.horario ? `
-      <div class="bar-detail__info-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span>${bar.horario}</span>
-      </div>` : ''}
+      ${statusHtml}
       ${bar.telefone ? `
       <div class="bar-detail__info-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.59 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.09a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
@@ -227,8 +285,9 @@ window._verBar = function (id) {
       </div>` : ''}
     </div>
     <div class="bar-detail__acoes">
-      <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn-primary" style="text-decoration:none;text-align:center;flex:1">Google Maps</a>
-      <a href="${wazeUrl}" target="_blank" rel="noopener" class="btn-outline" style="text-decoration:none;text-align:center;flex:1">Waze</a>
+      <button class="btn-primary" style="flex:1" onclick="window._abrirSeletorRota(${bar.lat}, ${bar.lng}, '${bar.nome.replace(/'/g, "\\'")}')">
+        Ver rota
+      </button>
     </div>
   `;
 
