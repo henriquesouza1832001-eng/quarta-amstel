@@ -437,6 +437,10 @@ html, body {
   position: relative;
 }
 
+#tab-mapa {
+  overflow: hidden;
+}
+
 .tab-content.active { display: flex; flex-direction: column; }
 
 /* ── LISTA — HEADER ── */
