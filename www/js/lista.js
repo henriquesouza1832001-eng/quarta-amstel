@@ -25,12 +25,17 @@ function _renderCardBar(bar) {
     : '';
 
   const campanhaHtml = bar.campanha_ativa
-    ? `<div class="bar-card__campanha">🍺 ${bar.campanha_ativa.promocao}</div>`
+    ? `<div class="bar-card__campanha">
+        <svg class="bar-card__campanha-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 3h14v4l-2 10H7L5 7V3z M9 3v4 M15 3v4"/>
+        </svg>
+        ${bar.campanha_ativa.promocao}
+      </div>`
     : '';
 
   const imgHtml = bar.foto_url
-    ? `<img src="${bar.foto_url}" alt="${bar.nome}" loading="lazy" onerror="this.parentElement.innerHTML='🍺'">`
-    : '🍺';
+    ? `<img src="${bar.foto_url}" alt="${bar.nome}" loading="lazy" onerror="this.outerHTML='<div class=\\'bar-card__placeholder\\'></div>'">`
+    : `<div class="bar-card__placeholder"></div>`;
 
   return `
     <div class="bar-card" onclick="window._verBar('${bar.id}')">
@@ -42,8 +47,17 @@ function _renderCardBar(bar) {
         ${campanhaHtml}
       </div>
       <div class="bar-card__actions">
-        <button class="bar-card__fav" onclick="event.stopPropagation(); this.classList.toggle('active'); this.textContent=this.classList.contains('active')?'♥':'♡'" aria-label="Favoritar">♡</button>
-        <svg class="bar-card__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <button class="bar-card__fav" onclick="event.stopPropagation(); this.classList.toggle('active')" aria-label="Favoritar">
+          <svg class="fav-icon-empty" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+          <svg class="fav-icon-filled" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </button>
+        <svg class="bar-card__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
       </div>
     </div>
   `;
