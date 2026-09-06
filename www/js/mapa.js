@@ -52,10 +52,13 @@ function _carregarTiles(dark) {
   }
 
   const url = dark
-    ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
-    : 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png';
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
-  L.tileLayer(url, { maxZoom: 20 }).addTo(_mapa);
+  L.tileLayer(url, {
+    maxZoom: 20,
+    subdomains: 'abcd',
+  }).addTo(_mapa);
 }
 
 function _renderMarcadores(bares) {
@@ -156,4 +159,12 @@ window._carregarBares = async function () {
   const bares = await _origCarregar();
   if (_mapa) _renderMarcadores(bares);
   return bares;
+};
+
+window._onMapaAtivado = function () {
+  if (_mapa) {
+    setTimeout(() => {
+      _mapa.invalidateSize();
+    }, 100);
+  }
 };
