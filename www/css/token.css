@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --font-brand: 'Playfair Display', 'Georgia', serif;
+  --font-ui:    'Inter', 'Arial', 'Helvetica Neue', sans-serif;
+
+  --amstel-red:       #cf001c;
+  --amstel-red-dark:  #b50018;
+  --amstel-navy:      #082f52;
+  --amstel-gold:      #d3a23b;
+
+  --amstel-cream:     #faf7ef;
+  --surface:          #ffffff;
+  --surface-soft:     #f7f4ed;
+
+  --text-primary:     #111111;
+  --text-secondary:   #666666;
+  --text-muted:       #909090;
+
+  --status-open:      #16a05d;
+  --status-closed:    #8f8f8f;
+
+  --page-padding-mobile:  16px;
+  --page-padding-tablet:  24px;
+  --page-padding-desktop: 32px;
+
+  --radius-sm:   10px;
+  --radius-md:   14px;
+  --radius-lg:   18px;
+  --radius-pill: 999px;
+
+  --shadow-soft: 0 4px 18px rgba(0,0,0,.07);
+
+  --header-height:      60px;
+  --bottom-nav-height:  68px;
+  --azulejo-height:     22px;
+
+  --transition-fast:   150ms ease;
+  --transition-normal: 220ms ease;
+}
+
+[data-theme="dark"] {
+  --amstel-cream:  #111009;
+  --surface:       #1a1a1a;
+  --surface-soft:  #222222;
+  --text-primary:  #f5f4f0;
+  --text-secondary:#aaaaaa;
+  --text-muted:    #666666;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --amstel-cream:  #111009;
+    --surface:       #1a1a1a;
+    --surface-soft:  #222222;
+    --text-primary:  #f5f4f0;
+    --text-secondary:#aaaaaa;
+    --text-muted:    #666666;
+  }
+}
