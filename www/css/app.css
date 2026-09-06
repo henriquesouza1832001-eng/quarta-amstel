@@ -335,16 +335,7 @@ html, body {
 }
 
 .header__menu {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-secondary);
-  border-radius: 8px;
+  display: none;
 }
 
 .header__center {
@@ -353,6 +344,7 @@ html, body {
   align-items: center;
   gap: 2px;
   flex: 1;
+  margin: 0 auto;
 }
 
 .header__logo-img {
@@ -1184,6 +1176,7 @@ html, body {
   align-items: center;
   gap: 2px;
   flex: 1;
+  margin: 0 auto;
 }
 
 .header__logo-img {
@@ -1390,4 +1383,4 @@ html, body {
   text-decoration: none;
   flex-shrink: 0;
   min-width: 72px;
-  text-align: center;
+  text-align: center;}

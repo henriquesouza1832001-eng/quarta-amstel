@@ -354,6 +354,10 @@
     </div>
     <div class="field"><label>Telefone</label><input id="b-tel" placeholder="(31) 9999-9999"></div>
     <div class="field"><label>Horário</label><input id="b-hor" placeholder="Ter-Sáb 17h-00h"></div>
+    <div class="field"><label>URL da foto</label><input id="b-foto" placeholder="https://...foto.jpg"></div>
+    <div id="b-foto-preview" style="display:none;margin-top:8px">
+      <img id="b-foto-img" style="width:100%;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
+    </div>
     <div id="modal-bar-erro" class="erro-msg hidden"></div>
     <div class="modal-actions">
       <button class="btn btn-g" onclick="_fecharModalBar()">Cancelar</button>
@@ -556,7 +560,8 @@ async function _aprovarBar(id) {
 function _abrirModalBar(id) {
   document.getElementById('modal-bar').classList.remove('hidden');
   document.getElementById('modal-bar-titulo').textContent = id ? 'Editar bar' : 'Adicionar bar';
-  ['b-nome','b-end','b-bairro','b-tel','b-hor','b-lat','b-lng'].forEach(f => document.getElementById(f).value = '');
+  ['b-nome','b-end','b-bairro','b-tel','b-hor','b-lat','b-lng','b-foto'].forEach(f => document.getElementById(f).value = '');
+  document.getElementById('b-foto-preview').style.display = 'none';
   document.getElementById('b-cidade').value = 'Belo Horizonte';
   document.getElementById('b-estado').value = 'MG';
   document.getElementById('modal-bar-erro').classList.add('hidden');
@@ -564,6 +569,20 @@ function _abrirModalBar(id) {
 }
 
 function _fecharModalBar() { document.getElementById('modal-bar').classList.add('hidden'); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('b-foto')?.addEventListener('input', function() {
+    const prev = document.getElementById('b-foto-preview');
+    const img = document.getElementById('b-foto-img');
+    if (this.value) {
+      img.src = this.value;
+      img.onload = () => { prev.style.display = 'block'; };
+      img.onerror = () => { prev.style.display = 'none'; };
+    } else {
+      prev.style.display = 'none';
+    }
+  });
+});
 
 function _editarBar(id) {
   const bar = _baresAdmin.find(b => b.id === id);
@@ -578,6 +597,11 @@ function _editarBar(id) {
   document.getElementById('b-lng').value = bar.lng;
   document.getElementById('b-tel').value = bar.telefone || '';
   document.getElementById('b-hor').value = bar.horario || '';
+  document.getElementById('b-foto').value = bar.foto_url || '';
+  const prev = document.getElementById('b-foto-preview');
+  const img = document.getElementById('b-foto-img');
+  if (bar.foto_url) { img.src = bar.foto_url; prev.style.display = 'block'; }
+  else { prev.style.display = 'none'; }
 }
 
 async function _salvarBar() {
@@ -591,6 +615,7 @@ async function _salvarBar() {
     lng: parseFloat(document.getElementById('b-lng').value),
     telefone: document.getElementById('b-tel').value,
     horario: document.getElementById('b-hor').value,
+    foto_url: document.getElementById('b-foto').value || null,
   };
 
   if (!body.nome || !body.endereco || !body.bairro || !body.cidade || !body.estado || !body.lat || !body.lng) {
