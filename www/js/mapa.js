@@ -118,9 +118,7 @@ function _carregarTiles(dark) {
 function _pinHtml(selecionado) {
   const cls = selecionado ? 'pin-amstel pin-amstel--sel' : 'pin-amstel';
   return `<div class="${cls}">
-    <svg viewBox="0 0 24 24" fill="white" width="16" height="16">
-      <path d="M5 3h14l-1 10H6L5 3zM9 3V1M15 3V1M8 13c0 2 1.5 3 4 3s4-1 4-3"/>
-    </svg>
+    <img src="/logos/Logo-256.png" style="width:24px;height:24px;object-fit:contain;transform:rotate(45deg);border-radius:50%;" onerror="this.style.display='none'">
   </div>`;
 }
 
