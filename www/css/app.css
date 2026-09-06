@@ -791,7 +791,8 @@ html, body {
   align-items: center;
   gap: 12px;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
-  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 14px;
+  margin-bottom: calc(var(--bottom-nav-height) + var(--azulejo-height));
 }
 
 .card-proximo__img {

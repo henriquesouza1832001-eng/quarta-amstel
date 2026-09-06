@@ -274,11 +274,11 @@ async function _iniciarApp() {
     }
   }
 
-  if (window._initMapa) window._initMapa(loc);
-
   if (window._renderLista) {
     window._renderLista(bares, loc ? undefined : 'localizacao-negada');
   }
+
+  if (window._initMapa) window._initMapa(loc);
 
   setTimeout(async () => {
     if (window._solicitarPush && swReg) {
