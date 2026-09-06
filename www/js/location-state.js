@@ -60,7 +60,7 @@ window._iniciarGeolocalizacao = function () {
       state.error = err.code;
       _emitLocationState();
     },
-    { timeout: 10000, maximumAge: 60000 }
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 }
   );
 };
 

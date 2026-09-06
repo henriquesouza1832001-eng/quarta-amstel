@@ -15,43 +15,44 @@ function _esconderLoadingMapa() {
 window._mostrarLoadingMapa = function () {
   const el = document.getElementById('mapa-loading');
   if (!el) return;
-  // Reinicia animação do copo
-  const fill = document.getElementById('amstel-beer-fill');
+  const fill = document.getElementById('beer-fill');
   if (fill) {
     fill.style.animation = 'none';
-    fill.offsetHeight; // reflow
+    void fill.offsetHeight;
     fill.style.animation = '';
   }
+  const err = document.getElementById('mapa-loading-error');
+  const txt = document.getElementById('mapa-loading-text');
+  if (err) err.classList.add('hidden');
+  if (txt) txt.classList.remove('hidden');
   el.classList.remove('hidden', 'saindo');
 };
 
 window._setLoadingErro = function (tipo) {
-  const body = document.getElementById('mapa-loading-body');
-  if (!body) return;
+  const err = document.getElementById('mapa-loading-error');
+  const txt = document.getElementById('mapa-loading-text');
+  if (txt) txt.classList.add('hidden');
+  if (!err) return;
+  err.classList.remove('hidden');
   if (tipo === 'denied') {
-    body.innerHTML = `
-      <div class="map-location-loading__error">
-        <p class="map-location-loading__error-text">
-          Precisamos da sua localização para encontrar os bares mais próximos.<br>
-          Permita o acesso nas configurações do navegador.
-        </p>
-      </div>`;
+    err.innerHTML = `
+      <p class="map-location-loading__error-text">
+        Precisamos da sua localização para encontrar os bares mais próximos.
+        Permita o acesso nas configurações do navegador.
+      </p>`;
   } else {
-    body.innerHTML = `
-      <div class="map-location-loading__error">
-        <p class="map-location-loading__error-text">
-          Não conseguimos encontrar sua localização.
-        </p>
-        <button class="map-location-loading__error-btn" onclick="window._tentarLocNovamente()">
-          Tentar novamente
-        </button>
-      </div>`;
+    err.innerHTML = `
+      <p class="map-location-loading__error-text">
+        Não conseguimos encontrar sua localização.
+      </p>
+      <button class="map-location-loading__error-btn" onclick="window._tentarLocNovamente()">
+        Tentar novamente
+      </button>`;
   }
 };
 
 window._tentarLocNovamente = function () {
-  const body = document.getElementById('mapa-loading-body');
-  if (body) body.innerHTML = `<p class="map-location-loading__text" id="mapa-loading-text">Encontrando Amstel perto de você…</p>`;
+  window._mostrarLoadingMapa();
   window._resetGeolocalizacao && window._resetGeolocalizacao();
   window._iniciarGeolocalizacao && window._iniciarGeolocalizacao();
 };
@@ -60,6 +61,7 @@ window._initMapa = function (loc) {
   const locValida = (l) => l && !isNaN(parseFloat(l.lat)) && !isNaN(parseFloat(l.lng));
   const locEfetiva = locValida(loc) ? loc
     : (window._locationState?.coords || window._locSalvaRecente || null);
+
 
   _userLoc = locEfetiva;
 
@@ -88,8 +90,6 @@ window._initMapa = function (loc) {
     (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   _carregarTiles(isDark);
-
-  _esconderLoadingMapa();
 
   if (locEfetiva) _renderUserMarker(locEfetiva);
 
