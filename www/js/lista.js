@@ -1,17 +1,113 @@
 window._baresOriginais = [];
+window._filtroAtivo = 'proximos';
 
-window._renderLista = function (bares) {
+window._renderLista = function (bares, estado) {
   window._baresOriginais = bares || [];
   const lista = document.getElementById('lista-bares');
   if (!lista) return;
 
+  if (estado === 'loading') {
+    lista.innerHTML = _estadoHtml('loading');
+    return;
+  }
+
+  if (estado === 'erro') {
+    lista.innerHTML = _estadoHtml('erro');
+    return;
+  }
+
+  if (estado === 'sem-internet') {
+    lista.innerHTML = _estadoHtml('sem-internet');
+    return;
+  }
+
+  if (estado === 'localizacao-negada') {
+    lista.innerHTML = _estadoHtml('localizacao-negada');
+    return;
+  }
+
   if (!bares || !bares.length) {
-    lista.innerHTML = '<div class="loading" style="padding-top:60px">Nenhum bar encontrado na sua região.</div>';
+    lista.innerHTML = _estadoHtml('vazio');
     return;
   }
 
   lista.innerHTML = bares.map(bar => _renderCardBar(bar)).join('');
 };
+
+function _estadoHtml(tipo) {
+  const ir = `<button class="estado-btn-sec" onclick="window._mudarTab('mapa')">Ver no mapa</button>`;
+
+  const estados = {
+    loading: `<div class="estado-wrap">
+      <div class="estado-spinner"></div>
+      <p class="estado-txt">Buscando bares perto de você...</p>
+    </div>`,
+
+    vazio: `<div class="estado-wrap">
+      <svg class="estado-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="32" cy="32" r="28"/>
+        <path d="M22 32h20M32 22v20" opacity=".3"/>
+        <path d="M20 44 Q32 20 44 44" stroke-width="2"/>
+      </svg>
+      <p class="estado-titulo">Ainda não encontramos um Amstel por aqui.</p>
+      <p class="estado-txt">Confira sua localização ou veja no mapa os bares participantes.</p>
+      ${ir}
+    </div>`,
+
+    erro: `<div class="estado-wrap">
+      <svg class="estado-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="32" cy="32" r="28"/>
+        <path d="M32 20v16M32 42v2" stroke-width="2.5"/>
+      </svg>
+      <p class="estado-titulo">Algo deu errado.</p>
+      <p class="estado-txt">Não conseguimos carregar os bares. Tente novamente.</p>
+      <button class="estado-btn-pri" onclick="window._carregarBares().then(b=>window._renderLista(b))">Tentar novamente</button>
+    </div>`,
+
+    'sem-internet': `<div class="estado-wrap">
+      <svg class="estado-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M8 8l48 48M20 44a17 17 0 0 1 24-24M32 56a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" stroke-width="2"/>
+      </svg>
+      <p class="estado-titulo">Sem conexão.</p>
+      <p class="estado-txt">Verifique sua internet e tente novamente.</p>
+      <button class="estado-btn-pri" onclick="window._carregarBares().then(b=>window._renderLista(b))">Tentar novamente</button>
+    </div>`,
+
+    'localizacao-negada': `<div class="estado-wrap">
+      <svg class="estado-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M32 8C21 8 12 17 12 28c0 16 20 28 20 28s20-12 20-28C52 17 43 8 32 8z" stroke-width="2"/>
+        <circle cx="32" cy="28" r="6" stroke-width="2"/>
+        <path d="M16 16l32 32" stroke-width="2" stroke="var(--amstel-red)"/>
+      </svg>
+      <p class="estado-titulo">Localização não disponível.</p>
+      <p class="estado-txt">Permita o acesso à sua localização para encontrar bares próximos.</p>
+      ${ir}
+    </div>`,
+
+    'sem-abertos': `<div class="estado-wrap">
+      <svg class="estado-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="32" cy="32" r="28" stroke-width="2"/>
+        <path d="M32 18v14l8 8" stroke-width="2.5"/>
+      </svg>
+      <p class="estado-titulo">Nenhum bar aberto agora.</p>
+      <p class="estado-txt">Volte mais tarde ou veja todos os bares participantes.</p>
+      <button class="estado-btn-sec" onclick="window._filtrar('proximos')">Ver todos os bares</button>
+    </div>`,
+
+    'sem-promocao': `<div class="estado-wrap">
+      <svg class="estado-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 32h40M32 12v40" opacity=".2"/>
+        <path d="M20 44 Q32 20 44 44" stroke-width="2"/>
+        <circle cx="32" cy="20" r="4" stroke-width="2"/>
+      </svg>
+      <p class="estado-titulo">Nenhuma promoção ativa agora.</p>
+      <p class="estado-txt">Veja todos os bares participantes.</p>
+      <button class="estado-btn-sec" onclick="window._filtrar('proximos')">Ver todos os bares</button>
+    </div>`,
+  };
+
+  return estados[tipo] || estados.vazio;
+}
 
 function _renderCardBar(bar) {
   const distStr = bar.distancia_km != null
@@ -63,10 +159,8 @@ function _renderCardBar(bar) {
   `;
 }
 
-let _filtroAtivo = 'proximos';
-
 window._filtrar = function (filtro) {
-  _filtroAtivo = filtro;
+  window._filtroAtivo = filtro;
   document.querySelectorAll('.filtro-chip').forEach(c => c.classList.remove('active'));
   document.getElementById('filtro-' + filtro)?.classList.add('active');
 
@@ -74,14 +168,22 @@ window._filtrar = function (filtro) {
 
   if (filtro === 'abertos') {
     bares = bares.filter(b => b.horario);
+    if (!bares.length) {
+      document.getElementById('lista-bares').innerHTML = _estadoHtml('sem-abertos');
+      return;
+    }
+  }
+
+  if (filtro === 'promocao') {
+    bares = bares.filter(b => b.campanha_ativa);
+    if (!bares.length) {
+      document.getElementById('lista-bares').innerHTML = _estadoHtml('sem-promocao');
+      return;
+    }
   }
 
   const lista = document.getElementById('lista-bares');
   if (!lista) return;
-  if (!bares.length) {
-    lista.innerHTML = '<div class="loading" style="padding-top:40px">Nenhum bar encontrado.</div>';
-    return;
-  }
   lista.innerHTML = bares.map(bar => _renderCardBar(bar)).join('');
 };
 
@@ -122,7 +224,17 @@ async function _executarBusca(query) {
     const data = await resp.json();
 
     if (!data.ok || !data.bares?.length) {
-      lista.innerHTML = `<div class="loading" style="padding-top:40px">Nenhum bar encontrado para "${query}"</div>`;
+      lista.innerHTML = `<div class="estado-wrap">
+        <svg class="estado-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="28" cy="28" r="18" stroke-width="2"/>
+          <path d="M40 40l12 12" stroke-width="2.5"/>
+          <path d="M22 28h12M28 22v12" opacity=".3"/>
+        </svg>
+        <p class="estado-titulo">Não encontramos esse bar.</p>
+        <p class="estado-txt">Confira a digitação ou dê uma olhada no mapa.</p>
+        <button class="estado-btn-pri" onclick="document.getElementById('busca-input').value=''; window._filtrar(window._filtroAtivo)">Limpar busca</button>
+        <button class="estado-btn-sec" onclick="window._mudarTab('mapa')">Ver no mapa</button>
+      </div>`;
       return;
     }
 
@@ -132,6 +244,6 @@ async function _executarBusca(query) {
 
     lista.innerHTML = data.bares.map(bar => _renderCardBar(bar)).join('');
   } catch {
-    lista.innerHTML = '<div class="loading" style="padding-top:40px">Erro ao buscar. Verifique sua conexão.</div>';
+    lista.innerHTML = _estadoHtml(navigator.onLine ? 'erro' : 'sem-internet');
   }
 }
