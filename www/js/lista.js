@@ -1,17 +1,14 @@
+window._baresOriginais = [];
 
 window._renderLista = function (bares) {
+  window._baresOriginais = bares || [];
   const lista = document.getElementById('lista-bares');
-  const total = document.getElementById('descobrir-total');
-
   if (!lista) return;
 
   if (!bares || !bares.length) {
-    lista.innerHTML = `<div class="loading" style="padding-top:60px">Nenhum bar encontrado na sua região.</div>`;
-    if (total) total.textContent = '';
+    lista.innerHTML = '<div class="loading" style="padding-top:60px">Nenhum bar encontrado na sua região.</div>';
     return;
   }
-
-  if (total) total.textContent = `${bares.length} bares`;
 
   lista.innerHTML = bares.map(bar => _renderCardBar(bar)).join('');
 };
@@ -23,17 +20,21 @@ function _renderCardBar(bar) {
       : `${bar.distancia_km.toFixed(1)} km · ${bar.bairro}`
     : bar.bairro;
 
-  const campanhaHtml = bar.campanha_ativa
-    ? `<div class="bar-card__campanha">🍺 ${bar.campanha_ativa.promocao}</div>`
-    : '';
-
   const statusHtml = bar.horario
     ? `<div class="bar-card__status">Aberto · ${bar.horario}</div>`
     : '';
 
+  const campanhaHtml = bar.campanha_ativa
+    ? `<div class="bar-card__campanha">🍺 ${bar.campanha_ativa.promocao}</div>`
+    : '';
+
+  const imgHtml = bar.foto_url
+    ? `<img src="${bar.foto_url}" alt="${bar.nome}" loading="lazy" onerror="this.parentElement.innerHTML='🍺'">`
+    : '🍺';
+
   return `
     <div class="bar-card" onclick="window._verBar('${bar.id}')">
-      <div class="bar-card__img">🍺</div>
+      <div class="bar-card__img">${imgHtml}</div>
       <div class="bar-card__body">
         <div class="bar-card__nome">${bar.nome}</div>
         <div class="bar-card__endereco">${distStr}</div>
@@ -41,7 +42,7 @@ function _renderCardBar(bar) {
         ${campanhaHtml}
       </div>
       <div class="bar-card__actions">
-        <button class="bar-card__fav" onclick="event.stopPropagation()">♡</button>
+        <button class="bar-card__fav" onclick="event.stopPropagation(); this.classList.toggle('active'); this.textContent=this.classList.contains('active')?'♥':'♡'" aria-label="Favoritar">♡</button>
         <svg class="bar-card__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>
     </div>
@@ -50,61 +51,53 @@ function _renderCardBar(bar) {
 
 let _filtroAtivo = 'proximos';
 
-window._filtrar = function(filtro) {
+window._filtrar = function (filtro) {
   _filtroAtivo = filtro;
   document.querySelectorAll('.filtro-chip').forEach(c => c.classList.remove('active'));
   document.getElementById('filtro-' + filtro)?.classList.add('active');
 
-  let bares = window._bares || [];
+  let bares = window._baresOriginais || [];
 
   if (filtro === 'abertos') {
     bares = bares.filter(b => b.horario);
   }
 
-  _renderListaFiltrada(bares);
-};
-
-function _renderListaFiltrada(bares) {
   const lista = document.getElementById('lista-bares');
   if (!lista) return;
   if (!bares.length) {
-    lista.innerHTML = `<div class="loading" style="padding-top:40px">Nenhum bar encontrado.</div>`;
+    lista.innerHTML = '<div class="loading" style="padding-top:40px">Nenhum bar encontrado.</div>';
     return;
   }
   lista.innerHTML = bares.map(bar => _renderCardBar(bar)).join('');
-}
-
-function _emojiBar(nome) {
-  const n = nome.toLowerCase();
-  if (n.includes('butec') || n.includes('bar')) return '🍺';
-  if (n.includes('pizz')) return '🍕';
-  if (n.includes('chur')) return '🥩';
-  if (n.includes('petr')) return '⛽';
-  if (n.includes('rest')) return '🍽️';
-  if (n.includes('pub') || n.includes('botequi')) return '🍻';
-  return '🍺';
-}
+};
 
 let _buscaTimeout = null;
 
 window._buscar = function (query) {
-  const clear = document.getElementById('busca-clear');
-  if (clear) clear.classList.toggle('hidden', !query);
-
   clearTimeout(_buscaTimeout);
   _buscaTimeout = setTimeout(() => _executarBusca(query), 300);
 };
 
 async function _executarBusca(query) {
-  const lista = document.getElementById('lista-busca');
+  const lista = document.getElementById('lista-bares');
   if (!lista) return;
 
   if (!query || query.trim().length < 2) {
-    lista.innerHTML = `<div class="busca-empty">Digite para buscar um bar</div>`;
+    window._filtrar(_filtroAtivo);
     return;
   }
 
-  lista.innerHTML = `<div class="loading"></div>`;
+  const local = (window._baresOriginais || []).filter(b =>
+    b.nome.toLowerCase().includes(query.toLowerCase()) ||
+    b.bairro.toLowerCase().includes(query.toLowerCase())
+  );
+
+  if (local.length) {
+    lista.innerHTML = local.map(bar => _renderCardBar(bar)).join('');
+    return;
+  }
+
+  lista.innerHTML = '<div class="loading"></div>';
 
   try {
     const params = new URLSearchParams({ search: query.trim() });
@@ -115,29 +108,16 @@ async function _executarBusca(query) {
     const data = await resp.json();
 
     if (!data.ok || !data.bares?.length) {
-      lista.innerHTML = `<div class="busca-empty">Nenhum bar encontrado para "${query}"</div>`;
+      lista.innerHTML = `<div class="loading" style="padding-top:40px">Nenhum bar encontrado para "${query}"</div>`;
       return;
     }
 
     data.bares.forEach(b => {
       if (!window._bares.find(x => x.id === b.id)) window._bares.push(b);
-      else {
-        const idx = window._bares.findIndex(x => x.id === b.id);
-        window._bares[idx] = b;
-      }
     });
 
     lista.innerHTML = data.bares.map(bar => _renderCardBar(bar)).join('');
-  } catch (e) {
-    lista.innerHTML = `<div class="busca-empty">Erro ao buscar. Verifique sua conexão.</div>`;
+  } catch {
+    lista.innerHTML = '<div class="loading" style="padding-top:40px">Erro ao buscar. Verifique sua conexão.</div>';
   }
 }
-
-window._limparBusca = function () {
-  const input = document.getElementById('busca-input');
-  if (input) { input.value = ''; input.focus(); }
-  const clear = document.getElementById('busca-clear');
-  if (clear) clear.classList.add('hidden');
-  const lista = document.getElementById('lista-busca');
-  if (lista) lista.innerHTML = `<div class="busca-empty">Digite para buscar um bar</div>`;
-};
