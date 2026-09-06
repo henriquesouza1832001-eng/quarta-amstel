@@ -779,16 +779,18 @@ html, body {
 
 /* ── CARD PROXIMO (mapa) ── */
 .card-proximo {
-  position: relative;
-  z-index: 10;
-  background: var(--bg-card);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 401;
+  background: var(--surface);
   border-top: 1px solid var(--border);
   padding: 14px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
   box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
-  flex-shrink: 0;
   padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -1370,7 +1372,7 @@ html, body {
 /* ── Botão localizar ── */
 .mapa-btn-localizar {
   position: absolute;
-  bottom: calc(var(--bottom-nav-height) + var(--azulejo-height) + 90px);
+  bottom: 120px;
   right: var(--page-padding-mobile);
   z-index: 400;
   width: 44px;
