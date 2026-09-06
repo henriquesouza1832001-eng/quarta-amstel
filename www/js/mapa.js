@@ -8,10 +8,11 @@ let _userLoc = null;
 window._initMapa = function (loc) {
   _userLoc = loc;
   const centro = loc ? [loc.lat, loc.lng] : [-19.9167, -43.9345];
+  const zoom = loc ? 13 : 12;
 
   _mapa = L.map('mapa', {
     center: centro,
-    zoom: 13,
+    zoom: zoom,
     zoomControl: false,
     attributionControl: false,
     preferCanvas: true,
@@ -38,7 +39,8 @@ window._initMapa = function (loc) {
   });
 };
 
-function _renderUserMarker(loc) {
+window._renderUserMarker = function (loc) {
+  if (!_mapa) return;
   if (_userMarker) _mapa.removeLayer(_userMarker);
   const userIcon = L.divIcon({
     html: `<div class="user-pin">
@@ -62,7 +64,7 @@ window._centralizarUsuario = function () {
       _userLoc = loc;
       window._userLat = loc.lat;
       window._userLng = loc.lng;
-      _renderUserMarker(loc);
+      window._renderUserMarker(loc);
       _mapa.flyTo([loc.lat, loc.lng], 14, { animate: true, duration: 0.8 });
       if (btn) btn.classList.remove('loading');
     },
