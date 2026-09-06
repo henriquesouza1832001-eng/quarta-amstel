@@ -1,18 +1,14 @@
-/* ── LOADING AMSTEL — Quarta é Dia de Amstel ── */
+/* ── LOADING AMSTEL ── */
 
-/* 
-  Ocupa SOMENTE a área do #tab-mapa.
-  Header, bottom-nav e azulejo ficam FORA e visíveis.
-*/
 .map-location-loading {
   position: absolute;
   inset: 0;
   z-index: 5;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: clamp(48px, 8vh, 80px);
   opacity: 1;
   transition: opacity 0.28s ease;
 }
@@ -26,202 +22,45 @@
   display: none;
 }
 
-/* ── FUNDO ── */
 .map-location-loading__bg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 30%;
+  object-position: center center;
   z-index: 0;
 }
 
 .map-location-loading__overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.20);
+  background: rgba(0, 0, 0, 0.30);
   z-index: 1;
 }
 
-/* ── STAGE DO COPO ── */
-/* Posicionado absolutamente para base "pousar" na mesa */
-.amstel-glass-stage {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(160px, 24vh, 260px);
-  transform: translateX(-50%);
-  width: clamp(140px, 22vw, 200px);
-  aspect-ratio: 0.68 / 1;
-  z-index: 2;
-}
-
-/* ── MÁSCARA INTERNA DO COPO ── */
-/*
-  clip-path trapezoidal imitando geometria interna do Lagoinha:
-  mais largo no topo, afunila na base.
-  Calibrar esses valores olhando o PNG.
-*/
-.glass-inner-mask {
-  position: absolute;
-  left: 11%;
-  right: 11%;
-  top: 7%;
-  bottom: 11%;
-  overflow: hidden;
-  border-radius: 4px 4px 14px 14px;
-  clip-path: polygon(
-    4%  0%,
-    96% 0%,
-    90% 100%,
-    10% 100%
-  );
-  z-index: 1;
-}
-
-/* ── CERVEJA — fica dentro da máscara ── */
-.beer-liquid {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  /* começa em 0, animação sobe via transform no .beer-fill */
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    rgba(126, 63,  0, .95)  0%,
-    rgba(215,126,  0, .96) 18%,
-    rgba(255,183, 36, .98) 46%,
-    rgba(239,147,  7, .97) 72%,
-    rgba(143, 72,  0, .96) 100%
-  );
-  box-shadow:
-    inset 12px 0 20px rgba(80, 30, 0, .12),
-    inset -12px 0 20px rgba(80, 30, 0, .12),
-    inset 0 8px 14px rgba(255, 214, 120, .16);
-}
-
-/* Faixa de brilho */
-.beer-liquid::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 18%;
-  width: 12%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, .18),
-    transparent
-  );
-  filter: blur(2px);
-}
-
-/* Textura de bolhas estáticas */
-.beer-liquid::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(circle at 20% 70%, rgba(255,255,255,.45) 0 1px, transparent 2px),
-    radial-gradient(circle at 55% 45%, rgba(255,255,255,.35) 0 1px, transparent 2px),
-    radial-gradient(circle at 72% 80%, rgba(255,255,255,.35) 0 1px, transparent 2px);
-  background-size:
-    26px 34px,
-    31px 42px,
-    23px 37px;
-  opacity: .45;
-}
-
-/* ── CONJUNTO QUE SOBE (cerveja + espuma como bloco único) ── */
-.beer-fill {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  transform: translateY(100%);
-  animation: beer-rise 7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .beer-fill {
-    animation: none;
-    transform: translateY(28%);
-  }
-}
-
-/* ── ESPUMA — presa matematicamente ao topo da cerveja ── */
-.amstel-foam {
-  width: 88%;
-  align-self: center;
-  display: block;
-  flex-shrink: 0;
+.map-location-loading__text {
   position: relative;
   z-index: 2;
-  margin-bottom: -2px;
-  max-height: 18%;
-  object-fit: contain;
-}
-
-/* ── VIDRO — na frente de tudo, cobre bordas da cerveja ── */
-.amstel-glass-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-  z-index: 3;
-  pointer-events: none;
-}
-
-/* ── LOGO — camada fixa no vidro ── */
-.amstel-glass-logo {
-  position: absolute;
-  width: 40%;
-  top: 38%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 4;
-  pointer-events: none;
-}
-
-/* ── TEXTO ── */
-.map-location-loading__text {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(100px, 14vh, 150px);
-  transform: translateX(-50%);
-  width: min(86%, 420px);
-  text-align: center;
-  z-index: 2;
   font-family: var(--font-heading, 'Anton', sans-serif);
-  font-size: clamp(14px, 1.8vw, 18px);
-  line-height: 1.3;
-  letter-spacing: .04em;
+  font-size: clamp(1rem, 2.8vw, 1.25rem);
+  letter-spacing: 0.08em;
+  color: rgba(255, 242, 210, 0.96);
+  text-shadow: 0 2px 12px rgba(0,0,0,0.7);
+  text-align: center;
   text-transform: none;
-  color: rgba(255, 242, 210, 0.95);
-  text-shadow: 0 1px 8px rgba(0,0,0,.7), 0 0 20px rgba(0,0,0,.4);
+  width: min(90%, 480px);
 }
 
-/* ── ERRO ── */
 .map-location-loading__error {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(80px, 12vh, 130px);
-  transform: translateX(-50%);
-  width: min(86%, 380px);
+  position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
   text-align: center;
+  width: min(90%, 380px);
 }
 
 .map-location-loading__error-text {
@@ -246,31 +85,4 @@
 
 .map-location-loading__error-btn:active {
   background: #a50d26;
-}
-
-/* ── KEYFRAMES ── */
-@keyframes beer-rise {
-  0%   { transform: translateY(100%); }
-  6%   { transform: translateY(96%); }
-  30%  { transform: translateY(62%); }
-  70%  { transform: translateY(35%); }
-  100% { transform: translateY(28%); }
-}
-
-/* ── RESPONSIVO ── */
-@media (min-width: 768px) {
-  .amstel-glass-stage {
-    width: clamp(170px, 18vw, 210px);
-    bottom: clamp(180px, 26vh, 280px);
-  }
-  .map-location-loading__text {
-    bottom: clamp(120px, 16vh, 170px);
-  }
-}
-
-@media (min-width: 1024px) {
-  .amstel-glass-stage {
-    width: 210px;
-    bottom: clamp(200px, 28vh, 300px);
-  }
 }
