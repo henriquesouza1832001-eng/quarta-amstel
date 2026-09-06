@@ -10,6 +10,8 @@ window._initMapa = function (loc) {
     zoom: 13,
     zoomControl: false,
     attributionControl: false,
+    preferCanvas: true,
+    renderer: L.canvas(),
   });
 
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
@@ -51,13 +53,12 @@ function _carregarTiles(dark) {
     _mapa.eachLayer(layer => { if (layer instanceof L.TileLayer) _mapa.removeLayer(layer); });
   }
 
-  const url = dark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-
-  L.tileLayer(url, {
-    maxZoom: 20,
-    subdomains: 'abcd',
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    subdomains: 'abc',
+    keepBuffer: 4,
+    updateWhenIdle: false,
+    updateWhenZooming: false,
   }).addTo(_mapa);
 }
 
