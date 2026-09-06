@@ -485,23 +485,6 @@ html, body {
     padding-right: calc(50% - 500px);
   }
 }
-    max-width: 1100px;
-  }
-
-  .descobrir-header {
-    padding: 32px var(--page-padding-desktop) 12px;
-  }
-
-  .busca-lista-wrap {
-    padding-left: var(--page-padding-desktop);
-    padding-right: var(--page-padding-desktop);
-  }
-
-  .filtros-row {
-    padding-left: var(--page-padding-desktop);
-    padding-right: var(--page-padding-desktop);
-  }
-}
 
 .page-title {
   font-family: var(--font-brand);
