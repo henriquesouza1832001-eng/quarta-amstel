@@ -600,7 +600,8 @@ html, body {
 .lista-bares {
   display: flex;
   flex-direction: column;
-  background: var(--surface);
+  background: var(--amstel-cream);
+  width: 100%;
 }
 
 .bars-grid {
@@ -632,9 +633,10 @@ html, body {
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
-  background: var(--bg-card);
+  background: var(--surface);
   transition: background 0.1s;
   -webkit-tap-highlight-color: transparent;
+  width: 100%;
 }
 
 .bar-card:active { background: var(--bg-input); }
