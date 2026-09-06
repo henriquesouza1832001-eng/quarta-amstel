@@ -433,6 +433,7 @@ html, body {
   height: 100%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  background: var(--amstel-cream);
 }
 
 .tab-content.active { display: flex; flex-direction: column; }
