@@ -169,26 +169,16 @@ window._carregarBares = async function () {
 
 window._mudarTab = function (tab) {
   if (tab === 'mapa') {
-    const state = window._locationState;
-
     if (window._mapa) {
       window._onMapaAtivado && window._onMapaAtivado();
-    } else if (state?.status === 'ready' && state.coords) {
-      window._initMapa(state.coords);
-    } else if (state?.status === 'locating') {
-      window._mostrarLoadingMapa && window._mostrarLoadingMapa();
-      window._mapaAguardandoLoc = true;
-    } else if (state?.status === 'denied' || state?.status === 'error') {
-      window._mostrarLoadingMapa && window._mostrarLoadingMapa();
-      window._setLoadingErro && window._setLoadingErro(state.status);
     } else {
-      window._initMapa(window._locSalvaRecente || null);
+      const loc = window._locationState?.coords || window._locSalvaRecente || window._userLoc || null;
+      window._initMapa(loc);
     }
   }
   document.querySelectorAll('.nav-item').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tab}`));
 };
-
 window._verBar = function (id) {
   const bar = window._bares.find(b => b.id === id);
   if (!bar) return;
@@ -270,17 +260,13 @@ async function _iniciarApp() {
   if (window._onLocationState) {
     window._onLocationState(function (state) {
       if (state.status === 'ready' && state.coords) {
-        if (window._mapaAguardandoLoc) {
-          window._mapaAguardandoLoc = false;
-          if (!window._mapa) {
-            window._initMapa(state.coords);
-          }
+        if (window._mapa) {
+          // Mapa já aberto — centraliza silenciosamente
+          window._mapa.flyTo([state.coords.lat, state.coords.lng], 13, { animate: true, duration: 0.6 });
+          if (window._renderUserMarker) window._renderUserMarker(state.coords);
           if (window._bares?.length && window._renderMarcadoresMapa) {
             window._renderMarcadoresMapa(window._bares);
           }
-        } else if (window._mapa) {
-          window._mapa.flyTo([state.coords.lat, state.coords.lng], 13, { animate: true, duration: 0.8 });
-          if (window._renderUserMarker) window._renderUserMarker(state.coords);
         }
         if (window._bares?.length && window._renderLista) {
           window._renderLista(window._bares);

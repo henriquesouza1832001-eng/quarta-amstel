@@ -58,28 +58,18 @@ window._tentarLocNovamente = function () {
 };
 
 window._initMapa = function (loc) {
-  if (_mapa) {
-    _esconderLoadingMapa();
-    return;
-  }
+  if (_mapa) return;
 
   const locValida = (l) => l && !isNaN(parseFloat(l.lat)) && !isNaN(parseFloat(l.lng));
   const locEfetiva = locValida(loc) ? loc
     : (window._locationState?.coords || window._locSalvaRecente || null);
-
+  const centro = locEfetiva
+    ? [+locEfetiva.lat, +locEfetiva.lng]
+    : [-20.0, -44.0];
+  const zoom = locEfetiva ? 13 : 7;
   _userLoc = locEfetiva;
-
-  if (!locEfetiva) {
-    window._mostrarLoadingMapa();
-    window._mapaAguardandoLoc = true;
-    return;
-  }
-
   _esconderLoadingMapa();
-  _userLoc = locEfetiva;
-
-  const centro = [+locEfetiva.lat, +locEfetiva.lng];
-  const zoom = 13;
+  window._mapaAguardandoLoc = false;
 
   window._mapa = _mapa = L.map('mapa', {
     center: centro,
