@@ -262,11 +262,35 @@ window._toast = function (msg) {
   setTimeout(() => t.classList.add('hidden'), 3200);
 };
 
+function _salvarLocalizacao(loc) {
+  try {
+    localStorage.setItem('amstel_loc', JSON.stringify({ lat: loc.lat, lng: loc.lng, ts: Date.now() }));
+  } catch {}
+}
+
+function _locSalva() {
+  try {
+    const raw = localStorage.getItem('amstel_loc');
+    if (!raw) return null;
+    const loc = JSON.parse(raw);
+    const MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+    if (Date.now() - loc.ts > MAX_AGE) return null;
+    return loc;
+  } catch { return null; }
+}
+
 async function _iniciarApp() {
   document.getElementById('app')?.classList.remove('hidden');
   window._mudarTab('descobrir');
 
   const swReg = await _registrarSW();
+
+  const locSalva = _locSalva();
+  if (locSalva) {
+    window._userLoc = locSalva;
+    window._userLat = locSalva.lat;
+    window._userLng = locSalva.lng;
+  }
 
   if (window._renderLista) window._renderLista([], 'loading');
 
@@ -275,11 +299,22 @@ async function _iniciarApp() {
     window._carregarBares().catch(() => []),
   ]);
 
+  if (loc) {
+    window._userLoc = loc;
+    window._userLat = loc.lat;
+    window._userLng = loc.lng;
+    _salvarLocalizacao(loc);
+    if (window._mapa) {
+      window._mapa.flyTo([loc.lat, loc.lng], 13, { animate: true, duration: 0.8 });
+      if (window._renderUserMarker) window._renderUserMarker(loc);
+    }
+  }
+
   if (window._renderLista) {
     window._renderLista(bares, bares.length ? undefined : (loc ? undefined : 'localizacao-negada'));
   }
 
-  window._userLoc = loc;
+  window._userLoc = loc || locSalva;
 
   setTimeout(async () => {
     if (window._solicitarPush && swReg) {
