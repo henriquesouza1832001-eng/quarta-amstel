@@ -605,8 +605,9 @@ html, body {
 }
 
 .bars-grid {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
 
 @media (min-width: 768px) {
