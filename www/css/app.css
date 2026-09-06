@@ -5,6 +5,8 @@
   --bg-header:var(--surface);
   --bg-input: var(--surface-soft);
   --border:   #e8e4da;
+  --radius-full: var(--radius-pill);
+  --amstel-red: var(--amstel-red, #cf001c);
   --font-display: var(--font-brand);
   --font-body:    var(--font-ui);
   --header-h: var(--header-height);
@@ -76,7 +78,7 @@ html, body {
 }
 
 .age-gate__brand {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
   font-size: 2.2rem;
   font-weight: 900;
   color: var(--amstel-red);
@@ -114,7 +116,7 @@ html, body {
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   color: var(--text-primary);
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: 1rem;
   text-align: center;
   transition: border-color 0.15s;
@@ -247,7 +249,7 @@ html, body {
 }
 
 .header__logo span {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
   font-size: 1.15rem;
   font-weight: 900;
   color: var(--amstel-red);
@@ -316,7 +318,7 @@ html, body {
   background: none;
   border: none;
   cursor: pointer;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   padding: 0;
 }
 
@@ -396,7 +398,7 @@ html, body {
 }
 
 .descobrir-header h2 {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
   font-size: 2.1rem;
   font-weight: 900;
   color: var(--text-primary);
@@ -439,7 +441,7 @@ html, body {
   background: none;
   border: none;
   outline: none;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: 0.9rem;
   color: var(--text-primary);
 }
@@ -468,7 +470,7 @@ html, body {
   color: var(--text-secondary);
   white-space: nowrap;
   cursor: pointer;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   transition: all 0.15s;
   flex-shrink: 0;
 }
@@ -477,7 +479,7 @@ html, body {
   background: var(--amstel-red);
   border-color: var(--amstel-red);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(200,16,46,0.3);
+  box-shadow: 0 2px 8px rgba(207,0,28,0.3);
 }
 
 /* ── CARDS DE BAR ── */
@@ -706,7 +708,7 @@ html, body {
   text-align: center;
   border: none;
   cursor: pointer;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   box-shadow: 0 4px 12px rgba(200,16,46,0.35);
   transition: background 0.15s;
 }
@@ -731,40 +733,6 @@ html, body {
   padding: 3px 9px;
   border-radius: var(--radius-full);
 }
-
-.filtros-row {
-  display: flex;
-  gap: 8px;
-  padding: 0 16px 12px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-.filtros-row::-webkit-scrollbar { display: none; }
-
-.filtro-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 16px;
-  border-radius: var(--radius-full);
-  border: 1.5px solid var(--border);
-  background: var(--bg-card);
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  cursor: pointer;
-  font-family: var(--font-body);
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-
-.filtro-chip.active {
-  background: var(--amstel-red);
-  border-color: var(--amstel-red);
-  color: #fff;
-}
-
 .busca-lista {
   display: flex;
   align-items: center;
@@ -783,7 +751,7 @@ html, body {
   background: none;
   border: none;
   outline: none;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: 0.9rem;
   color: var(--text-primary);
 }
@@ -823,7 +791,7 @@ html, body {
   background: none;
   border: none;
   outline: none;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: 0.9rem;
   color: var(--text-primary);
 }
@@ -890,7 +858,7 @@ html, body {
 }
 
 .bar-detail__nome {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
   font-size: 2rem;
   font-weight: 900;
   color: var(--text-primary);
@@ -923,7 +891,7 @@ html, body {
 }
 
 .bar-detail__campanha-texto {
-  font-family: var(--font-display);
+  font-family: var(--font-brand);
   font-size: 1.3rem;
   font-weight: 900;
   line-height: 1.2;
@@ -961,7 +929,7 @@ html, body {
   border: none;
   border-radius: var(--radius-full);
   padding: 13px 24px;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -985,7 +953,7 @@ html, body {
   border: 1px solid var(--border);
   border-radius: var(--radius-full);
   padding: 13px 24px;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
@@ -1006,7 +974,7 @@ html, body {
   border: 1.5px solid var(--amstel-red);
   border-radius: var(--radius-full);
   padding: 13px 24px;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -1057,7 +1025,7 @@ html, body {
 
 .leaflet-container {
   background: var(--bg-input);
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
 }
 
 .leaflet-popup-content-wrapper {
