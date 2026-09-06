@@ -61,8 +61,7 @@ window._initMapa = function (loc) {
   if (_mapa) return;
 
   const locValida = (l) => l && !isNaN(parseFloat(l.lat)) && !isNaN(parseFloat(l.lng));
-  const locEfetiva = locValida(loc) ? loc
-    : (window._locationState?.coords || window._locSalvaRecente || null);
+  const locEfetiva = locValida(loc) ? loc : null;
   const centro = locEfetiva
     ? [+locEfetiva.lat, +locEfetiva.lng]
     : [-18.5, -45.5];

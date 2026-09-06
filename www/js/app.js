@@ -176,10 +176,10 @@ window._mudarTab = function (tab) {
     if (window._mapa) {
       window._onMapaAtivado && window._onMapaAtivado();
     } else {
-      requestAnimationFrame(() => {
-        const loc = window._locationState?.coords || window._locSalvaRecente || window._userLoc || null;
+      setTimeout(() => {
+        const loc = window._locationState?.coords || null;
         window._initMapa(loc);
-      });
+      }, 80);
     }
   }
 };
