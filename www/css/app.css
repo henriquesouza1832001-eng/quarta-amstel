@@ -372,8 +372,9 @@ html, body {
 }
 
 .nav-item svg { opacity: 0.45; transition: opacity var(--transition-fast); }
-.nav-item.active { color: var(--amstel-red); border: none; outline: none; }
+.nav-item.active { color: var(--amstel-red); }
 .nav-item:focus-visible { outline: 2px solid var(--amstel-red); outline-offset: -2px; }
+.nav-item, .nav-item:focus { border: none; outline: none; box-shadow: none; }
 .nav-item.active svg { opacity: 1; }
 
 /* ── MAIN ── */
@@ -605,7 +606,8 @@ html, body {
 .mapa {
   flex: 1;
   min-height: 0;
-  height: calc(100dvh - var(--header-height) - var(--bottom-nav-height) - var(--azulejo-height)) !important;
+  width: 100%;
+  height: calc(100dvh - var(--header-height) - var(--bottom-nav-height) - clamp(26px, 3.2vh, 32px)) !important;
   z-index: 1;
 }
 
