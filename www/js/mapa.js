@@ -279,7 +279,7 @@ function _mostrarCardBar(bar) {
     ? `<img src="${bar.foto_url}" alt="${bar.nome}" onerror="this.parentElement.innerHTML='🍺'">`
     : '🍺';
 
-  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${bar.lat},${bar.lng}`;
+  const nomeEscapado = bar.nome.replace(/'/g, "\\'");
 
   card.innerHTML = `
     <div class="card-proximo__img">${imgHtml}</div>
@@ -289,10 +289,10 @@ function _mostrarCardBar(bar) {
       ${statusHtml}
       ${promoHtml}
     </div>
-    <a href="${mapsUrl}" target="_blank" rel="noopener" class="btn-ver-rota">
+    <button class="btn-ver-rota" onclick="window._abrirSeletorRota(${bar.lat}, ${bar.lng}, '${nomeEscapado}')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
       Ver rota
-    </a>
+    </button>
   `;
 
   card.classList.remove('hidden');

@@ -1627,3 +1627,89 @@ html, body {
   flex-shrink: 0;
   min-width: 72px;
   text-align: center;}
+/* ── MODAL ROTA ── */
+.modal__content--rota {
+  padding: 0;
+  border-radius: 20px 20px 0 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 100%;
+}
+
+.rota-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 12px;
+  font-family: var(--font-heading, 'Anton', sans-serif);
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--color-border, #eee);
+}
+
+.rota-destino {
+  padding: 10px 20px;
+  font-size: 0.82rem;
+  color: var(--text-muted, #888);
+  border-bottom: 1px solid var(--color-border, #eee);
+}
+
+.rota-opcoes {
+  padding: 8px 0 max(16px, env(safe-area-inset-bottom));
+}
+
+.rota-opcao {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.rota-opcao:active {
+  background: var(--color-bg-alt, #f5f0e8);
+}
+
+.rota-opcao__icon {
+  font-size: 1.3rem;
+  width: 28px;
+  text-align: center;
+}
+
+.rota-opcao__label {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text, #1a1a1a);
+}
+
+/* ── PLACEHOLDER AMSTEL ── */
+.bar-detail__foto {
+  width: 100%;
+  height: 180px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  background: var(--amstel-red, #C8102E);
+}
+
+.bar-detail__foto img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bar-detail__foto-placeholder {
+  width: 100%;
+  height: 100%;
+  background:
+    url('/logos/Logo-256.png') center/80px no-repeat,
+    var(--amstel-red, #C8102E);
+}
