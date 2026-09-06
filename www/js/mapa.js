@@ -1,8 +1,12 @@
 let _mapa = null;
 let _marcadores = [];
 let _barSelecionado = null;
+let _userMarker = null;
+let _filtroMapaAtivo = 'proximos';
+let _userLoc = null;
 
 window._initMapa = function (loc) {
+  _userLoc = loc;
   const centro = loc ? [loc.lat, loc.lng] : [-19.9167, -43.9345];
 
   _mapa = L.map('mapa', {
@@ -19,21 +23,7 @@ window._initMapa = function (loc) {
 
   _carregarTiles(isDark);
 
-  if (loc) {
-    const userIcon = L.divIcon({
-      html: `<div style="
-        width:14px;height:14px;
-        background:#4A90E2;
-        border:3px solid white;
-        border-radius:50%;
-        box-shadow:0 0 0 8px rgba(74,144,226,0.2);
-      "></div>`,
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
-      className: '',
-    });
-    L.marker([loc.lat, loc.lng], { icon: userIcon }).addTo(_mapa);
-  }
+  if (loc) _renderUserMarker(loc);
 
   _renderMarcadores(window._bares || []);
 
@@ -46,6 +36,69 @@ window._initMapa = function (loc) {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
     if (!document.documentElement.getAttribute('data-theme')) _carregarTiles(e.matches);
   });
+};
+
+function _renderUserMarker(loc) {
+  if (_userMarker) _mapa.removeLayer(_userMarker);
+  const userIcon = L.divIcon({
+    html: `<div class="user-pin">
+      <div class="user-pin__dot"></div>
+      <div class="user-pin__halo"></div>
+    </div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    className: '',
+  });
+  _userMarker = L.marker([loc.lat, loc.lng], { icon: userIcon, zIndexOffset: -100 }).addTo(_mapa);
+}
+
+window._centralizarUsuario = function () {
+  const btn = document.getElementById('mapa-btn-localizar');
+  if (btn) btn.classList.add('loading');
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      _userLoc = loc;
+      window._userLat = loc.lat;
+      window._userLng = loc.lng;
+      _renderUserMarker(loc);
+      _mapa.flyTo([loc.lat, loc.lng], 14, { animate: true, duration: 0.8 });
+      if (btn) btn.classList.remove('loading');
+    },
+    () => { if (btn) btn.classList.remove('loading'); },
+    { timeout: 6000, maximumAge: 30000 }
+  );
+};
+
+window._filtrarMapa = function (filtro) {
+  _filtroMapaAtivo = filtro;
+  document.querySelectorAll('.mapa-filtros .filtro-chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('mapa-filtro-' + filtro)?.classList.add('active');
+
+  let bares = window._bares || [];
+  if (filtro === 'abertos') bares = bares.filter(b => b.horario);
+  if (filtro === 'promocao') bares = bares.filter(b => b.campanha_ativa);
+  _renderMarcadores(bares);
+};
+
+window._buscarMapa = function (query) {
+  const clear = document.getElementById('mapa-busca-clear');
+  if (clear) clear.classList.toggle('hidden', !query);
+
+  const bares = (window._bares || []).filter(b =>
+    !query || b.nome.toLowerCase().includes(query.toLowerCase()) ||
+    b.bairro.toLowerCase().includes(query.toLowerCase())
+  );
+  _renderMarcadores(bares);
+};
+
+window._limparBuscaMapa = function () {
+  const input = document.getElementById('mapa-busca-input');
+  if (input) input.value = '';
+  const clear = document.getElementById('mapa-busca-clear');
+  if (clear) clear.classList.add('hidden');
+  _renderMarcadores(window._bares || []);
 };
 
 function _carregarTiles(dark) {
@@ -62,53 +115,71 @@ function _carregarTiles(dark) {
   }).addTo(_mapa);
 }
 
+function _pinHtml(selecionado) {
+  const cls = selecionado ? 'pin-amstel pin-amstel--sel' : 'pin-amstel';
+  return `<div class="${cls}">
+    <svg viewBox="0 0 24 24" fill="white" width="16" height="16">
+      <path d="M5 3h14l-1 10H6L5 3zM9 3V1M15 3V1M8 13c0 2 1.5 3 4 3s4-1 4-3"/>
+    </svg>
+  </div>`;
+}
+
 function _renderMarcadores(bares) {
   _marcadores.forEach(m => _mapa.removeLayer(m));
   _marcadores = [];
 
-  bares.forEach((bar, i) => {
-    const pinIcon = L.divIcon({
-      html: `<div style="
-        width:42px;height:42px;
-        background:#C8102E;
-        border:3px solid white;
-        border-radius:50% 50% 50% 0;
-        transform:rotate(-45deg);
-        box-shadow:0 3px 12px rgba(200,16,46,0.5);
-        cursor:pointer;
-        display:flex;align-items:center;justify-content:center;
-        overflow:hidden;
-      ">
-        <img src="/logos/Logo-256.png" style="
-          width:30px;height:30px;
-          object-fit:contain;
-          transform:rotate(45deg);
-          border-radius:50%;
-        " onerror="this.style.display='none'">
-      </div>`,
-      iconSize: [42, 42],
-      iconAnchor: [21, 42],
-      popupAnchor: [0, -42],
-      className: '',
-    });
+  const card = document.getElementById('card-proximo');
+  if (card && !bares.length) card.classList.add('hidden');
 
-    const marker = L.marker([bar.lat, bar.lng], { icon: pinIcon });
+  bares.forEach((bar, i) => {
+    const isSel = i === 0;
+    const marker = L.marker([bar.lat, bar.lng], {
+      icon: L.divIcon({
+        html: _pinHtml(isSel),
+        iconSize: isSel ? [44, 54] : [36, 44],
+        iconAnchor: isSel ? [22, 54] : [18, 44],
+        className: '',
+      }),
+      zIndexOffset: isSel ? 1000 : 0,
+    });
 
     marker.on('click', () => {
+      if (_barSelecionado && _barSelecionado._marker) {
+        _barSelecionado._marker.setIcon(L.divIcon({
+          html: _pinHtml(false),
+          iconSize: [36, 44],
+          iconAnchor: [18, 44],
+          className: '',
+        }));
+        _barSelecionado._marker.setZIndexOffset(0);
+      }
+      marker.setIcon(L.divIcon({
+        html: _pinHtml(true),
+        iconSize: [44, 54],
+        iconAnchor: [22, 54],
+        className: '',
+      }));
+      marker.setZIndexOffset(1000);
+      bar._marker = marker;
+      _barSelecionado = bar;
       _mostrarCardBar(bar);
     });
+
+    bar._marker = marker;
+    if (isSel) {
+      bar._marker = marker;
+      _barSelecionado = bar;
+    }
 
     marker.addTo(_mapa);
     _marcadores.push(marker);
 
-    if (i === 0) {
-      _mostrarCardBar(bar);
-    }
+    if (isSel) _mostrarCardBar(bar);
   });
 
   if (bares.length > 0 && _mapa) {
     const group = L.featureGroup(_marcadores);
-    _mapa.fitBounds(group.getBounds().pad(0.15), { maxZoom: 14 });
+    _mapa.fitBounds(group.getBounds().pad(0.2), { maxZoom: 14 });
   }
 }
 

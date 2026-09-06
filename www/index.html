@@ -218,7 +218,36 @@
       <main class="main">
         <!-- TAB MAPA -->
         <section id="tab-mapa" class="tab-content active">
+          <!-- Busca flutuante sobre o mapa -->
+          <div class="mapa-busca-wrap">
+            <div class="mapa-busca">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input type="text" id="mapa-busca-input" placeholder="Buscar bar, bairro ou região" oninput="window._buscarMapa(this.value)" autocomplete="off">
+              <button class="mapa-busca-clear hidden" id="mapa-busca-clear" onclick="window._limparBuscaMapa()">✕</button>
+            </div>
+            <!-- Filtros sobre o mapa -->
+            <div class="mapa-filtros">
+              <button class="filtro-chip active" id="mapa-filtro-proximos" onclick="window._filtrarMapa('proximos')">Mais próximos</button>
+              <button class="filtro-chip" id="mapa-filtro-abertos" onclick="window._filtrarMapa('abertos')">Abertos agora</button>
+              <button class="filtro-chip" id="mapa-filtro-promocao" onclick="window._filtrarMapa('promocao')">Promoção Amstel</button>
+            </div>
+          </div>
+
+          <!-- Mapa -->
           <div id="mapa" class="mapa"></div>
+
+          <!-- Botão centralizar -->
+          <button class="mapa-btn-localizar" id="mapa-btn-localizar" onclick="window._centralizarUsuario()" aria-label="Centralizar minha localização">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+              <circle cx="12" cy="12" r="9" stroke-dasharray="3 2" opacity=".4"/>
+            </svg>
+          </button>
+
+          <!-- Card bar selecionado -->
           <div id="card-proximo" class="card-proximo hidden"></div>
         </section>
 
