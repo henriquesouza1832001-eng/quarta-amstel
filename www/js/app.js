@@ -139,24 +139,7 @@ async function _registrarSW() {
   }
 }
 
-function _pedirLocalizacao() {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) {
-      resolve(null);
-      return;
-    }
 
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        window._userLat = pos.coords.latitude;
-        window._userLng = pos.coords.longitude;
-        resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      },
-      () => resolve(null),
-      { timeout: 8000, maximumAge: 60000 }
-    );
-  });
-}
 
 window._carregarBares = async function () {
   try {
@@ -186,10 +169,19 @@ window._carregarBares = async function () {
 
 window._mudarTab = function (tab) {
   if (tab === 'mapa') {
-    if (!window._mapa) {
-      window._initMapa(window._userLoc || null);
-    } else {
+    const state = window._locationState;
+
+    if (window._mapa) {
       window._onMapaAtivado && window._onMapaAtivado();
+    } else if (state?.status === 'ready' && state.coords) {
+      window._initMapa(state.coords);
+    } else if (state?.status === 'locating') {
+      window._mostrarLoadingMapa && window._mostrarLoadingMapa();
+    } else if (state?.status === 'denied' || state?.status === 'error') {
+      window._mostrarLoadingMapa && window._mostrarLoadingMapa();
+      window._setLoadingErro && window._setLoadingErro(state.status);
+    } else {
+      window._initMapa(window._userLoc || null);
     }
   }
   document.querySelectorAll('.nav-item').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
@@ -262,22 +254,7 @@ window._toast = function (msg) {
   setTimeout(() => t.classList.add('hidden'), 3200);
 };
 
-function _salvarLocalizacao(loc) {
-  try {
-    localStorage.setItem('amstel_loc', JSON.stringify({ lat: loc.lat, lng: loc.lng, ts: Date.now() }));
-  } catch {}
-}
 
-function _locSalva() {
-  try {
-    const raw = localStorage.getItem('amstel_loc');
-    if (!raw) return null;
-    const loc = JSON.parse(raw);
-    const MAX_AGE = 7 * 24 * 60 * 60 * 1000;
-    if (Date.now() - loc.ts > MAX_AGE) return null;
-    return loc;
-  } catch { return null; }
-}
 
 async function _iniciarApp() {
   document.getElementById('app')?.classList.remove('hidden');
@@ -285,40 +262,46 @@ async function _iniciarApp() {
 
   const swReg = await _registrarSW();
 
-  const locSalva = _locSalva();
-  if (locSalva) {
-    window._userLoc = locSalva;
-    window._userLat = locSalva.lat;
-    window._userLng = locSalva.lng;
-  }
-
   if (window._renderLista) window._renderLista([], 'loading');
-
-  const [loc, bares] = await Promise.all([
-    _pedirLocalizacao(),
-    window._carregarBares().catch(() => []),
-  ]);
-
-  const locValida = (l) => l && !isNaN(parseFloat(l.lat)) && !isNaN(parseFloat(l.lng));
-
-  if (locValida(loc)) {
-    window._userLoc = loc;
-    window._userLat = loc.lat;
-    window._userLng = loc.lng;
-    _salvarLocalizacao(loc);
-    if (window._mapa) {
-      window._mapa.flyTo([loc.lat, loc.lng], 13, { animate: true, duration: 0.8 });
-      if (window._renderUserMarker) window._renderUserMarker(loc);
-    }
+  if (window._iniciarGeolocalizacao) {
+    window._iniciarGeolocalizacao();
   }
-
-  window._userLoc = locValida(loc) ? loc : locSalva;
+  if (window._onLocationState) {
+    window._onLocationState(function (state) {
+      if (state.status === 'ready' && state.coords) {
+        if (window._mapaAguardandoLoc) {
+          window._mapaAguardandoLoc = false;
+          window._initMapa(state.coords);
+          if (window._bares?.length && window._renderMarcadoresMapa) {
+            window._renderMarcadoresMapa(window._bares);
+          }
+        } else if (window._mapa) {
+          window._mapa.flyTo([state.coords.lat, state.coords.lng], 13, { animate: true, duration: 0.8 });
+          if (window._renderUserMarker) window._renderUserMarker(state.coords);
+        }
+        if (window._bares?.length && window._renderLista) {
+          window._renderLista(window._bares);
+        }
+      } else if (state.status === 'denied' || state.status === 'error') {
+        if (window._mapaAguardandoLoc) {
+          window._setLoadingErro && window._setLoadingErro(state.status);
+        }
+        if (window._renderLista) {
+          window._renderLista(window._bares || [], 'localizacao-negada');
+        }
+      }
+    });
+  }
+  const bares = await window._carregarBares().catch(() => []);
+  window._bares = bares;
 
   if (window._renderLista) {
-    window._renderLista(bares, bares.length ? undefined : (loc ? undefined : 'localizacao-negada'));
+    const state = window._locationState;
+    const status = state?.status === 'ready' ? undefined
+      : state?.status === 'denied' ? 'localizacao-negada'
+      : undefined;
+    window._renderLista(bares, status);
   }
-
-
 
   setTimeout(async () => {
     if (window._solicitarPush && swReg) {

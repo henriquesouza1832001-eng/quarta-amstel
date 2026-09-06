@@ -5,10 +5,75 @@ let _userMarker = null;
 let _filtroMapaAtivo = 'proximos';
 let _userLoc = null;
 
+function _esconderLoadingMapa() {
+  const el = document.getElementById('mapa-loading');
+  if (!el) return;
+  el.classList.add('saindo');
+  setTimeout(() => el.classList.add('hidden'), 300);
+}
+
+window._mostrarLoadingMapa = function () {
+  const el = document.getElementById('mapa-loading');
+  if (!el) return;
+  // Reinicia animação do copo
+  const fill = document.getElementById('amstel-beer-fill');
+  if (fill) {
+    fill.style.animation = 'none';
+    fill.offsetHeight; // reflow
+    fill.style.animation = '';
+  }
+  el.classList.remove('hidden', 'saindo');
+};
+
+window._setLoadingErro = function (tipo) {
+  const body = document.getElementById('mapa-loading-body');
+  if (!body) return;
+  if (tipo === 'denied') {
+    body.innerHTML = `
+      <div class="map-location-loading__error">
+        <p class="map-location-loading__error-text">
+          Precisamos da sua localização para encontrar os bares mais próximos.<br>
+          Permita o acesso nas configurações do navegador.
+        </p>
+      </div>`;
+  } else {
+    body.innerHTML = `
+      <div class="map-location-loading__error">
+        <p class="map-location-loading__error-text">
+          Não conseguimos encontrar sua localização.
+        </p>
+        <button class="map-location-loading__error-btn" onclick="window._tentarLocNovamente()">
+          Tentar novamente
+        </button>
+      </div>`;
+  }
+};
+
+window._tentarLocNovamente = function () {
+  const body = document.getElementById('mapa-loading-body');
+  if (body) body.innerHTML = `<p class="map-location-loading__text" id="mapa-loading-text">Encontrando Amstel perto de você…</p>`;
+  window._resetGeolocalizacao && window._resetGeolocalizacao();
+  window._iniciarGeolocalizacao && window._iniciarGeolocalizacao();
+};
+
 window._initMapa = function (loc) {
-  _userLoc = loc;
-  const centro = loc ? [loc.lat, loc.lng] : [-19.9167, -43.9345];
-  const zoom = loc ? 13 : 12;
+  const locValida = (l) => l && !isNaN(parseFloat(l.lat)) && !isNaN(parseFloat(l.lng));
+  const locEfetiva = locValida(loc) ? loc
+    : (window._locationState?.coords || window._locSalvaRecente || null);
+
+  _userLoc = locEfetiva;
+
+  if (!locEfetiva) {
+    window._mostrarLoadingMapa();
+    window._mapaAguardandoLoc = true;
+    return;
+  }
+
+  _esconderLoadingMapa();
+  _userLoc = locEfetiva;
+
+  const centro = [+locEfetiva.lat, +locEfetiva.lng];
+  const zoom = 13;
 
   window._mapa = _mapa = L.map('mapa', {
     center: centro,
@@ -24,7 +89,9 @@ window._initMapa = function (loc) {
 
   _carregarTiles(isDark);
 
-  if (loc) _renderUserMarker(loc);
+  _esconderLoadingMapa();
+
+  if (locEfetiva) _renderUserMarker(locEfetiva);
 
   _renderMarcadores(window._bares || []);
 
@@ -123,6 +190,8 @@ function _pinHtml(selecionado) {
     <img src="/logos/Logo-256.png" style="width:24px;height:24px;object-fit:contain;transform:rotate(45deg);border-radius:50%;" onerror="this.style.display='none'">
   </div>`;
 }
+
+window._renderMarcadoresMapa = function(bares) { _renderMarcadores(bares); };
 
 function _renderMarcadores(bares) {
   _marcadores.forEach(m => _mapa.removeLayer(m));

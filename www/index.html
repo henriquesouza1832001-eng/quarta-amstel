@@ -54,6 +54,7 @@
     />
     <link rel="stylesheet" href="/css/token.css" />
     <link rel="stylesheet" href="/css/app.css" />
+    <link rel="stylesheet" href="/css/loading-beer.css" />
   </head>
   <body>
     <!-- AGE GATE -->
@@ -235,6 +236,48 @@
             </div>
           </div>
 
+          <!-- Loading geolocalização Amstel -->
+          <div id="mapa-loading" class="map-location-loading hidden">
+            <img
+              class="map-location-loading__bg"
+              src="/assets/loading/amstel-bar-bg.webp"
+              alt=""
+              aria-hidden="true"
+            />
+            <div class="map-location-loading__overlay" aria-hidden="true"></div>
+
+            <!-- Copo enchendo -->
+            <div class="amstel-glass-stage" id="amstel-glass-stage" aria-hidden="true">
+              <div class="amstel-beer-mask">
+                <div class="amstel-beer-fill" id="amstel-beer-fill">
+                  <img
+                    class="amstel-foam"
+                    src="/assets/loading/beer-foam.png"
+                    alt=""
+                  />
+                  <div class="amstel-beer-liquid"></div>
+                </div>
+              </div>
+              <img
+                class="amstel-glass-img"
+                src="/assets/loading/lagoinha-glass.png"
+                alt=""
+              />
+              <img
+                class="amstel-glass-logo"
+                src="/assets/loading/amstel-logo.png"
+                alt="Amstel"
+              />
+            </div>
+
+            <!-- Texto e erro -->
+            <div id="mapa-loading-body">
+              <p class="map-location-loading__text" id="mapa-loading-text">
+                Encontrando Amstel perto de você…
+              </p>
+            </div>
+          </div>
+
           <!-- Mapa -->
           <div id="mapa" class="mapa"></div>
 
@@ -324,6 +367,7 @@
     <div id="toast" class="toast hidden"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/js/location-state.js"></script>
     <script src="/js/app.js"></script>
     <script src="/js/mapa.js"></script>
     <script src="/js/lista.js"></script>
