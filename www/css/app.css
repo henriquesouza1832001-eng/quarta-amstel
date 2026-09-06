@@ -1,82 +1,35 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;900&family=Inter:wght@400;500;600&display=swap');
-
+/* tokens importados de tokens.css */
 :root {
-  --amstel-red:    #C8102E;
-  --amstel-red-dk: #A00D24;
-  --amstel-gold:   #F5A623;
-  --amstel-gold-lt:#FFD07A;
-
-  --bg:            #F5F4F0;
-  --bg-card:       #FFFFFF;
-  --bg-header:     #FFFFFF;
-  --bg-tab:        #FFFFFF;
-  --bg-input:      #F0EFEB;
-
-  --text-primary:  #1A1A1A;
-  --text-secondary:#5A5A5A;
-  --text-muted:    #9A9A9A;
-  --text-on-red:   #FFFFFF;
-
-  --border:        #E5E3DC;
-  --border-focus:  #C8102E;
-  --shadow:        0 2px 12px rgba(0,0,0,0.08);
-  --shadow-card:   0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.06);
-
-  --radius-sm:  8px;
-  --radius-md:  16px;
-  --radius-lg:  20px;
-  --radius-full: 999px;
-
-  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
-  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-
-  --header-h: 56px;
-  --tabs-h:   52px;
+  --bg:       var(--amstel-cream);
+  --bg-card:  var(--surface);
+  --bg-header:var(--surface);
+  --bg-input: var(--surface-soft);
+  --border:   #e8e4da;
+  --font-display: var(--font-brand);
+  --font-body:    var(--font-ui);
+  --header-h: var(--header-height);
+  --tabs-h:   var(--bottom-nav-height);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-[data-theme="dark"] {
-  --bg:           #0D0D0D;
-  --bg-card:      #1A1A1A;
-  --bg-header:    #111111;
-  --bg-tab:       #111111;
-  --bg-input:     #222222;
-
-  --text-primary:  #F5F4F0;
-  --text-secondary:#AAAAAA;
-  --text-muted:    #666666;
-
-  --border:        #2A2A2A;
-  --shadow:        0 2px 12px rgba(0,0,0,0.4);
-  --shadow-card:   0 1px 4px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.3);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg:           #0D0D0D;
-    --bg-card:      #1A1A1A;
-    --bg-header:    #111111;
-    --bg-tab:       #111111;
-    --bg-input:     #222222;
-    --text-primary:  #F5F4F0;
-    --text-secondary:#AAAAAA;
-    --text-muted:    #666666;
-    --border:        #2A2A2A;
-    --shadow:        0 2px 12px rgba(0,0,0,0.4);
-    --shadow-card:   0 1px 4px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.3);
-  }
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  height: 100%;
+  min-height: 100dvh;
   overflow: hidden;
-  font-family: var(--font-body);
-  background: var(--bg);
+  font-family: var(--font-ui);
+  background: var(--amstel-cream);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
-  transition: background 0.2s, color 0.2s;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  height: 100dvh;
+  background: var(--amstel-cream);
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .hidden { display: none !important; }
@@ -369,8 +322,8 @@ html, body {
 
 .header__theme { display: none; }
 
-/* ── BOTTOM NAV ── */
-.bottom-nav-wrap {
+/* ── BOTTOM AREA ── */
+.bottom-area {
   position: fixed;
   bottom: 0;
   left: 0;
@@ -380,24 +333,24 @@ html, body {
   flex-direction: column;
 }
 
-.tile-bar {
-  height: 52px;
+.bottom-nav {
+  display: flex;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  height: var(--bottom-nav-height);
+}
+
+.azulejo-bar {
+  height: var(--azulejo-height);
   width: 100%;
   background-image: url('/logos/Azulejo Full.png');
   background-size: auto 100%;
   background-repeat: repeat-x;
   background-position: center;
-  border-top: 2px solid #1a3a8a;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.tabs {
-  display: flex;
-  background: var(--bg-card);
-  border-top: 1px solid var(--border);
-  height: 60px;
-}
-
-.tab {
+.nav-item {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -408,24 +361,23 @@ html, body {
   background: none;
   border: none;
   cursor: pointer;
-  font-family: var(--font-body);
+  font-family: var(--font-ui);
   font-size: 0.7rem;
   font-weight: 600;
   color: var(--text-muted);
-  transition: color 0.15s;
-  letter-spacing: 0.02em;
+  transition: color var(--transition-fast);
 }
 
-.tab svg { opacity: 0.45; transition: opacity 0.15s; }
-.tab.active { color: var(--amstel-red); }
-.tab.active svg { opacity: 1; }
+.nav-item svg { opacity: 0.45; transition: opacity var(--transition-fast); }
+.nav-item.active { color: var(--amstel-red); }
+.nav-item.active svg { opacity: 1; }
 
 /* ── MAIN ── */
 .main {
   flex: 1;
   overflow: hidden;
   position: relative;
-  padding-bottom: calc(60px + 52px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(var(--bottom-nav-height) + var(--azulejo-height) + env(safe-area-inset-bottom, 0px));
 }
 
 .tab-content {
@@ -649,7 +601,7 @@ html, body {
 .mapa {
   flex: 1;
   min-height: 0;
-  height: calc(100dvh - 56px - 52px - 60px) !important;
+  height: calc(100dvh - var(--header-height) - var(--bottom-nav-height) - var(--azulejo-height)) !important;
   z-index: 1;
 }
 
@@ -1157,87 +1109,7 @@ html, body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
-.header__menu {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  color: var(--text-secondary);
-  background: none;
-  border: none;
-  cursor: pointer;
-}
 
-.header__center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  flex: 1;
-  margin: 0 auto;
-}
-
-.header__logo-img {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-}
-
-.header__location {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #C8102E;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.bottom-nav-wrap {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 200;
-  display: flex;
-  flex-direction: column;
-}
-
-.tile-bar {
-  height: 56px;
-  width: 100%;
-  background-image: url('/logos/Azulejo Full.png');
-  background-size: auto 100%;
-  background-repeat: repeat-x;
-  background-position: center;
-}
-
-.mapa {
-  height: calc(100dvh - 56px - 56px - 64px) !important;
-}
-
-.main {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-  padding-bottom: calc(64px + 56px + env(safe-area-inset-bottom, 0px));
-}
-
-[data-theme="dark"] .header__menu,
-[data-theme="dark"] .header__theme {
-  color: #B8A898;
-}
-
-@media (prefers-color-scheme: dark) {
-  .header__menu, .header__theme {
-    color: #B8A898;
-  }
-}
 /* ── iOS Install Banner ── */
 #ios-install-banner {
   position: fixed;
