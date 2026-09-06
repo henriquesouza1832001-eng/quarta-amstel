@@ -278,6 +278,7 @@ async function _iniciarApp() {
     window._renderLista(bares, bares.length ? undefined : (loc ? undefined : 'localizacao-negada'));
   }
 
+  window._userLoc = loc;
   if (window._initMapa) requestAnimationFrame(() => window._initMapa(loc));
 
   setTimeout(async () => {
