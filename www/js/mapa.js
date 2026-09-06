@@ -240,8 +240,8 @@ function _renderMarcadores(bares) {
 
     if (isSel) _mostrarCardBar(bar);
   });
-
-  if (bares.length > 0 && _mapa && _marcadores.length > 0) {
+  const temGPS = window._locationState?.status === 'ready' && window._locationState?.coords;
+  if (temGPS && bares.length > 0 && _mapa && _marcadores.length > 0) {
     try {
       const group = L.featureGroup(_marcadores);
       const bounds = group.getBounds();
