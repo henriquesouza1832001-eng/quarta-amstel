@@ -65,8 +65,8 @@ window._initMapa = function (loc) {
     : (window._locationState?.coords || window._locSalvaRecente || null);
   const centro = locEfetiva
     ? [+locEfetiva.lat, +locEfetiva.lng]
-    : [-20.0, -44.0];
-  const zoom = locEfetiva ? 13 : 7;
+    : [-18.5, -45.5];
+  const zoom = locEfetiva ? 13 : 6;
   _userLoc = locEfetiva;
   _esconderLoadingMapa();
   window._mapaAguardandoLoc = false;
