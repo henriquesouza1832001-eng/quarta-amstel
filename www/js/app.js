@@ -299,7 +299,9 @@ async function _iniciarApp() {
     window._carregarBares().catch(() => []),
   ]);
 
-  if (loc) {
+  const locValida = (l) => l && !isNaN(parseFloat(l.lat)) && !isNaN(parseFloat(l.lng));
+
+  if (locValida(loc)) {
     window._userLoc = loc;
     window._userLat = loc.lat;
     window._userLng = loc.lng;
@@ -310,11 +312,13 @@ async function _iniciarApp() {
     }
   }
 
+  window._userLoc = locValida(loc) ? loc : locSalva;
+
   if (window._renderLista) {
     window._renderLista(bares, bares.length ? undefined : (loc ? undefined : 'localizacao-negada'));
   }
 
-  window._userLoc = loc || locSalva;
+
 
   setTimeout(async () => {
     if (window._solicitarPush && swReg) {

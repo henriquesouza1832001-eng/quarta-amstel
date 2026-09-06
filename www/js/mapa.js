@@ -131,6 +131,8 @@ function _renderMarcadores(bares) {
   const card = document.getElementById('card-proximo');
   if (card && !bares.length) card.classList.add('hidden');
 
+  bares = bares.filter(b => b.lat != null && b.lng != null && !isNaN(b.lat) && !isNaN(b.lng));
+
   bares.forEach((bar, i) => {
     const isSel = i === 0;
     const marker = L.marker([bar.lat, bar.lng], {
@@ -177,9 +179,16 @@ function _renderMarcadores(bares) {
     if (isSel) _mostrarCardBar(bar);
   });
 
-  if (bares.length > 0 && _mapa) {
-    const group = L.featureGroup(_marcadores);
-    _mapa.fitBounds(group.getBounds().pad(0.2), { maxZoom: 14 });
+  if (bares.length > 0 && _mapa && _marcadores.length > 0) {
+    try {
+      const group = L.featureGroup(_marcadores);
+      const bounds = group.getBounds();
+      if (bounds.isValid()) {
+        _mapa.fitBounds(bounds.pad(0.2), { maxZoom: 14 });
+      }
+    } catch (e) {
+      console.warn('[mapa] fitBounds inválido:', e);
+    }
   }
 }
 
