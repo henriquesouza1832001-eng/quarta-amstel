@@ -10,7 +10,7 @@ window._initMapa = function (loc) {
   const centro = loc ? [loc.lat, loc.lng] : [-19.9167, -43.9345];
   const zoom = loc ? 13 : 12;
 
-  _mapa = L.map('mapa', {
+  window._mapa = _mapa = L.map('mapa', {
     center: centro,
     zoom: zoom,
     zoomControl: false,
