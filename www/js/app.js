@@ -177,11 +177,12 @@ window._mudarTab = function (tab) {
       window._initMapa(state.coords);
     } else if (state?.status === 'locating') {
       window._mostrarLoadingMapa && window._mostrarLoadingMapa();
+      window._mapaAguardandoLoc = true;
     } else if (state?.status === 'denied' || state?.status === 'error') {
       window._mostrarLoadingMapa && window._mostrarLoadingMapa();
       window._setLoadingErro && window._setLoadingErro(state.status);
     } else {
-      window._initMapa(window._userLoc || null);
+      window._initMapa(window._locSalvaRecente || null);
     }
   }
   document.querySelectorAll('.nav-item').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
@@ -271,7 +272,9 @@ async function _iniciarApp() {
       if (state.status === 'ready' && state.coords) {
         if (window._mapaAguardandoLoc) {
           window._mapaAguardandoLoc = false;
-          window._initMapa(state.coords);
+          if (!window._mapa) {
+            window._initMapa(state.coords);
+          }
           if (window._bares?.length && window._renderMarcadoresMapa) {
             window._renderMarcadoresMapa(window._bares);
           }
