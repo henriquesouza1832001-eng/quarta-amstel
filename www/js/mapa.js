@@ -157,10 +157,18 @@ window._buscarMapa = function (query) {
   const clear = document.getElementById('mapa-busca-clear');
   if (clear) clear.classList.toggle('hidden', !query);
 
-  const bares = (window._bares || []).filter(b =>
-    !query || b.nome.toLowerCase().includes(query.toLowerCase()) ||
-    b.bairro.toLowerCase().includes(query.toLowerCase())
-  );
+  const termo = (query || '').trim().toLowerCase();
+
+  const bares = (window._bares || []).filter(bar => {
+    if (!termo) return true;
+
+    return (
+      String(bar.nome || '').toLowerCase().includes(termo) ||
+      String(bar.bairro || '').toLowerCase().includes(termo) ||
+      String(bar.cidade || '').toLowerCase().includes(termo) ||
+      String(bar.endereco || '').toLowerCase().includes(termo)
+    );
+  });
   _renderMarcadores(bares);
 };
 
