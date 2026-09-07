@@ -1455,6 +1455,28 @@ function _editarBar(id) {
   const img = document.getElementById('b-foto-img');
   if (bar.foto_url) { img.src = bar.foto_url; prev.style.display = 'block'; }
   else { prev.style.display = 'none'; }
+  _resetHorariosBar();
+
+(bar.horarios || []).forEach(h => {
+  const row = document.querySelector(
+    `.bar-horario-row[data-dia="${h.dia_semana}"]`
+  );
+
+  if (!row) return;
+
+  const check = row.querySelector('.b-dia-check');
+  const abertura = row.querySelector('.b-abertura');
+  const fechamento = row.querySelector('.b-fechamento');
+
+  const aberto = Number(h.aberto) === 1;
+
+  check.checked = aberto;
+  abertura.disabled = !aberto;
+  fechamento.disabled = !aberto;
+
+  abertura.value = aberto ? (h.abertura || '') : '';
+  fechamento.value = aberto ? (h.fechamento || '') : '';
+});
 }
 function _coletarHorariosBar() {
   return [...document.querySelectorAll('.bar-horario-row')].map(row => {
