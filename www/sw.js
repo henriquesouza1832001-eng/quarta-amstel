@@ -1,4 +1,4 @@
-const CACHE = 'quarta-amstel-v7';
+const CACHE = 'quarta-amstel-v8';
 const ASSETS = ['/', '/index.html', '/css/app.css', '/js/app.js', '/js/mapa.js', '/js/lista.js', '/js/push.js', '/manifest.json', '/logos/Logo-256.png', '/logos/Logo-512.png', '/logos/Azulejo Full.png'];
 
 self.addEventListener('install', e => {
