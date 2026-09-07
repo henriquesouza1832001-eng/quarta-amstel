@@ -1337,7 +1337,11 @@ _resetHorariosBar();
   window._editandoBarId =
     id || null;
 }
-
+function _fecharModalBar() {
+  document
+    .getElementById('modal-bar')
+    ?.classList.add('hidden');
+}
 function _toggleHorarioDia(check) {
   const row = check.closest('.bar-horario-row');
   if (!row) return;
