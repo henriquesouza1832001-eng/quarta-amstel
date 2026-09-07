@@ -225,19 +225,7 @@ html, body {
   background: var(--bg);
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 var(--page-padding-mobile);
-  height: var(--header-height);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  padding-top: env(safe-area-inset-top, 0px);
-  width: 100%;
-  position: relative;
-}
+
 
 .header__center {
   position: absolute;
@@ -308,7 +296,7 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  height: 56px;
+  height: var(--header-height);
   background: var(--bg-header);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -466,6 +454,7 @@ html, body {
     margin: 0 auto;
     width: 100%;
     box-sizing: border-box;
+    text-align: center;
   }
 
   .busca-lista-wrap {
@@ -486,7 +475,10 @@ html, body {
 
 @media (min-width: 1024px) {
   .descobrir-header {
-    padding: 32px calc(50% - 500px) 12px;
+    padding: 32px 20px 12px;
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
   }
 
   .busca-lista-wrap {
@@ -527,8 +519,13 @@ html, body {
   color: #666666;
   margin-top: 8px;
   line-height: 1.5;
-  text-wrap: balance;
-  max-width: 60ch;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .page-subtitle {
+    white-space: normal;
+  }
 }
 
 /* ── BUSCA ── */
