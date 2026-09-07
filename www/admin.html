@@ -1446,14 +1446,26 @@ function _editarBar(id) {
   document.getElementById('b-lat').value = bar.lat;
   document.getElementById('b-lng').value = bar.lng;
   document.getElementById('b-tel').value = bar.telefone || '';
-  document.getElementById('b-hor').value = bar.horario || '';
   document.getElementById('b-foto').value = bar.foto_url || '';
   const prev = document.getElementById('b-foto-preview');
   const img = document.getElementById('b-foto-img');
   if (bar.foto_url) { img.src = bar.foto_url; prev.style.display = 'block'; }
   else { prev.style.display = 'none'; }
 }
+function _coletarHorariosBar() {
+  return [...document.querySelectorAll('.bar-horario-row')].map(row => {
+    const check = row.querySelector('.b-dia-check');
+    const abertura = row.querySelector('.b-abertura');
+    const fechamento = row.querySelector('.b-fechamento');
 
+    return {
+      dia_semana: Number(row.dataset.dia),
+      aberto: check?.checked ? 1 : 0,
+      abertura: check?.checked ? (abertura?.value || null) : null,
+      fechamento: check?.checked ? (fechamento?.value || null) : null
+    };
+  });
+}
 async function _salvarBar() {
   const body = {
     nome: document.getElementById('b-nome').value,
@@ -1464,7 +1476,7 @@ async function _salvarBar() {
     lat: parseFloat(document.getElementById('b-lat').value),
     lng: parseFloat(document.getElementById('b-lng').value),
     telefone: document.getElementById('b-tel').value,
-    horario: document.getElementById('b-hor').value,
+    horarios: _coletarHorariosBar(),
     foto_url: document.getElementById('b-foto').value || null,
   };
 
