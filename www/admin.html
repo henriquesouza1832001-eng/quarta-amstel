@@ -407,7 +407,77 @@
 
   </main>
 </div>
+<!-- MODAL CAMPANHA -->
+<div id="modal-campanha" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3>Nova campanha</h3>
 
+    <div class="field">
+      <label>Título *</label>
+      <input id="c-titulo" maxlength="100"
+             placeholder="Ex: Quarta Amstel">
+    </div>
+
+    <div class="field">
+      <label>Promoção *</label>
+      <input id="c-promocao" maxlength="200"
+             placeholder="Ex: Amstel 600ml por R$ 9,90">
+    </div>
+
+    <div class="field">
+      <label>Descrição</label>
+      <input id="c-descricao" maxlength="300"
+             placeholder="Informações adicionais da campanha">
+    </div>
+
+    <div class="field">
+      <label>Bar</label>
+      <select id="c-bar" class="filter-select" style="width:100%">
+        <option value="">Carregando bares...</option>
+      </select>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field">
+        <label>Cidade</label>
+        <input id="c-cidade" placeholder="Belo Horizonte">
+      </div>
+
+      <div class="field">
+        <label>Estado</label>
+        <input id="c-estado" maxlength="2" placeholder="MG">
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field">
+        <label>Início *</label>
+        <input id="c-inicio" type="date">
+      </div>
+
+      <div class="field">
+        <label>Fim *</label>
+        <input id="c-fim" type="date">
+      </div>
+    </div>
+
+    <div id="campanha-result"
+         class="push-result hidden"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-g"
+              onclick="_fecharModalCampanha()">
+        Cancelar
+      </button>
+
+      <button class="btn btn-r"
+              id="btn-salvar-campanha"
+              onclick="_salvarCampanha()">
+        Criar campanha
+      </button>
+    </div>
+  </div>
+</div>
 <!-- MODAL BAR -->
 <div id="modal-bar" class="modal-overlay hidden">
   <div class="modal-box">
@@ -862,7 +932,148 @@ async function _carregarCampanhas() {
   `).join('');
 }
 
-function _abrirModalCampanha() { alert('Modal de criação de campanha — em breve'); }
+async function _abrirModalCampanha() {
+  const modal = document.getElementById('modal-campanha');
+  const select = document.getElementById('c-bar');
+  const result = document.getElementById('campanha-result');
+
+  result.classList.add('hidden');
+  result.textContent = '';
+
+  document.getElementById('c-titulo').value = '';
+  document.getElementById('c-promocao').value = '';
+  document.getElementById('c-descricao').value = '';
+  document.getElementById('c-cidade').value = '';
+  document.getElementById('c-estado').value = '';
+
+  const hoje = new Date().toISOString().split('T')[0];
+
+  document.getElementById('c-inicio').value = hoje;
+  document.getElementById('c-fim').value = hoje;
+
+  select.innerHTML = '<option value="">Todos / campanha regional</option>';
+
+  const data = await _api('/admin/bares');
+
+  if (data?.ok && Array.isArray(data.bares)) {
+    data.bares.forEach(bar => {
+      const option = document.createElement('option');
+
+      option.value = bar.id;
+      option.textContent =
+        `${bar.nome} — ${bar.cidade || ''}/${bar.estado || ''}`;
+
+      option.dataset.cidade = bar.cidade || '';
+      option.dataset.estado = bar.estado || '';
+
+      select.appendChild(option);
+    });
+  }
+
+  select.onchange = function () {
+    const option = this.options[this.selectedIndex];
+
+    if (this.value && option) {
+      document.getElementById('c-cidade').value =
+        option.dataset.cidade || '';
+
+      document.getElementById('c-estado').value =
+        option.dataset.estado || '';
+    }
+  };
+
+  modal.classList.remove('hidden');
+}
+
+function _fecharModalCampanha() {
+  document.getElementById('modal-campanha')
+    .classList.add('hidden');
+}
+
+async function _salvarCampanha() {
+  const titulo =
+    document.getElementById('c-titulo').value.trim();
+
+  const promocao =
+    document.getElementById('c-promocao').value.trim();
+
+  const descricao =
+    document.getElementById('c-descricao').value.trim();
+
+  const bar_id =
+    document.getElementById('c-bar').value || null;
+
+  const cidade =
+    document.getElementById('c-cidade').value.trim();
+
+  const estado =
+    document.getElementById('c-estado').value.trim().toUpperCase();
+
+  const inicio =
+    document.getElementById('c-inicio').value;
+
+  const fim =
+    document.getElementById('c-fim').value;
+
+  const result =
+    document.getElementById('campanha-result');
+
+  const btn =
+    document.getElementById('btn-salvar-campanha');
+
+  result.classList.remove('hidden');
+
+  if (!titulo || !promocao || !inicio || !fim) {
+    result.textContent =
+      '❌ Preencha título, promoção, início e fim.';
+    return;
+  }
+
+  if (fim < inicio) {
+    result.textContent =
+      '❌ A data final não pode ser anterior à inicial.';
+    return;
+  }
+
+  btn.disabled = true;
+  result.textContent = 'Salvando...';
+
+  try {
+    const data = await _api('/admin/campanhas', {
+      method: 'POST',
+      body: JSON.stringify({
+        titulo,
+        promocao,
+        descricao: descricao || null,
+        bar_id,
+        cidade: cidade || null,
+        estado: estado || null,
+        inicio,
+        fim
+      })
+    });
+
+    if (!data?.ok) {
+      result.textContent =
+        `❌ ${data?.erro || 'Erro ao criar campanha'}`;
+      return;
+    }
+
+    result.textContent = '✅ Campanha criada com sucesso.';
+
+    await _carregarCampanhas();
+
+    setTimeout(() => {
+      _fecharModalCampanha();
+    }, 500);
+
+  } catch (e) {
+    console.error('[Campanha]', e);
+    result.textContent = '❌ Erro ao criar campanha.';
+  } finally {
+    btn.disabled = false;
+  }
+}
 
 function _abrirImport() { document.getElementById('modal-import').classList.remove('hidden'); }
 
