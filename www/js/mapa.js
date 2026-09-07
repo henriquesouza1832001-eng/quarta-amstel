@@ -131,7 +131,7 @@ window._centralizarUsuario = function () {
       if (btn) btn.classList.remove('loading');
     },
     () => { if (btn) btn.classList.remove('loading'); },
-    { timeout: 6000, maximumAge: 30000 }
+    { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
   );
 };
 
