@@ -354,27 +354,33 @@ window._verBar = function (id) {
       ? window._barAbertoAgora(bar)
       : null;
 
-  const statusHtml = bar.horario
-    ? `<div class="bar-detail__info-item ${
-        abertoAgora === true
-          ? 'bar-detail__info-item--aberto'
-          : abertoAgora === false
-            ? 'bar-detail__info-item--fechado'
-            : ''
-      }">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <polyline points="12 6 12 12 16 14"/>
-        </svg>
-        <span>${
-          abertoAgora === true
-            ? `Aberto agora · ${bar.horario}`
-            : abertoAgora === false
-              ? `Fechado agora · ${bar.horario}`
-              : bar.horario
-        }</span>
-      </div>`
-    : '';
+  const statusHorario =
+  typeof window._statusHorarioBar === 'function'
+    ? window._statusHorarioBar(bar)
+    : null;
+
+const statusHtml = statusHorario
+  ? `
+    <div class="bar-detail__info-item ${
+      statusHorario.aberto
+        ? 'bar-detail__info-item--aberto'
+        : 'bar-detail__info-item--fechado'
+    }">
+      <svg xmlns="http://www.w3.org/2000/svg"
+           width="16"
+           height="16"
+           viewBox="0 0 24 24"
+           fill="none"
+           stroke="currentColor"
+           stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <polyline points="12 6 12 12 16 14"/>
+      </svg>
+
+      <span>${statusHorario.texto}</span>
+    </div>
+  `
+  : '';
 
   content.innerHTML = `
     ${fotoHtml}

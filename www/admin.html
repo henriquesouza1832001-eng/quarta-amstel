@@ -1555,7 +1555,20 @@ async function _carregarPreview() {
       <strong style="font-size:.95rem">${_esc(b.nome)}</strong>
       <div style="font-size:.78rem;color:var(--text2);margin-top:4px">${_esc(b.bairro)} · ${_esc(b.cidade)}, ${_esc(b.estado)}</div>
       <div style="font-size:.78rem;color:var(--text3);margin-top:2px">${_esc(b.endereco)}</div>
-      ${b.horario ? `<div style="font-size:.75rem;color:var(--text3);margin-top:4px">⏰ ${_esc(b.horario)}</div>` : ''}
+      ${Array.isArray(b.horarios) && b.horarios.length
+  ? (() => {
+      const hoje = new Date().getDay();
+      const h = b.horarios.find(x => Number(x.dia_semana) === hoje);
+
+      if (!h || Number(h.aberto) !== 1) {
+        return `<div style="font-size:.75rem;color:var(--text3);margin-top:4px">⏰ Fechado hoje</div>`;
+      }
+
+      return `<div style="font-size:.75rem;color:var(--text3);margin-top:4px">
+        ⏰ ${_esc(h.abertura)} às ${_esc(h.fechamento)}
+      </div>`;
+    })()
+  : ''}
       <div style="display:flex;gap:6px;margin-top:10px">
         <span class="badge badge-ok">Publicado</span>
         <span style="font-size:.7rem;color:var(--text3);padding:3px 0">${b.lat.toFixed(4)}, ${b.lng.toFixed(4)}</span>

@@ -351,32 +351,26 @@ function _mostrarCardBar(bar) {
         : d.toFixed(1) + ' km'} · ${bar.bairro || ''}`
     : (bar.bairro || '');
 
-  const abertoAgora =
-    typeof window._barAbertoAgora === 'function'
-      ? window._barAbertoAgora(bar)
-      : null;
+ const statusHorario =
+  typeof window._statusHorarioBar === 'function'
+    ? window._statusHorarioBar(bar)
+    : null;
 
-  let statusHtml = '';
+let statusHtml = '';
 
-  if (abertoAgora === true) {
-    statusHtml = `
-      <div class="prox-status">
-        Aberto agora${bar.horario ? ` · ${bar.horario}` : ''}
-      </div>
-    `;
-  } else if (abertoAgora === false) {
-    statusHtml = `
-      <div class="prox-status prox-status--fechado">
-        Fechado agora
-      </div>
-    `;
-  } else if (bar.horario) {
-    statusHtml = `
-      <div class="prox-status">
-        ${bar.horario}
-      </div>
-    `;
-  }
+if (statusHorario?.aberto === true) {
+  statusHtml = `
+    <div class="prox-status">
+      ${statusHorario.texto}
+    </div>
+  `;
+} else if (statusHorario?.aberto === false) {
+  statusHtml = `
+    <div class="prox-status prox-status--fechado">
+      Fechado agora
+    </div>
+  `;
+}
 
   const promoHtml = bar.campanha_ativa
     ? `
@@ -440,43 +434,7 @@ function _mostrarCardBar(bar) {
 }
 
 const _origCarregar = window._carregarBares;
-window._barAbertoAgora = function (bar, agora = new Date()) {
-  if (!bar || !bar.horario) return null;
 
-  const horario = String(bar.horario).trim();
-  const match = horario.match(
-    /(\d{1,2}):(\d{2})\s*(?:-|–|—|às|a)\s*(\d{1,2}):(\d{2})/i
-  );
-
-  if (!match) {
-    return null;
-  }
-
-  const aberturaHora = Number(match[1]);
-  const aberturaMin = Number(match[2]);
-  const fechamentoHora = Number(match[3]);
-  const fechamentoMin = Number(match[4]);
-
-  if (
-    aberturaHora > 23 ||
-    fechamentoHora > 23 ||
-    aberturaMin > 59 ||
-    fechamentoMin > 59
-  ) {
-    return null;
-  }
-  const atual = agora.getHours() * 60 + agora.getMinutes();
-  const abertura = aberturaHora * 60 + aberturaMin;
-  const fechamento = fechamentoHora * 60 + fechamentoMin;
-  if (fechamento > abertura) {
-    return atual >= abertura && atual < fechamento;
-  }
-  if (fechamento < abertura) {
-    return atual >= abertura || atual < fechamento;
-  }
-
-  return false;
-};
 
 window._carregarBares = async function () {
   const bares = await _origCarregar();
