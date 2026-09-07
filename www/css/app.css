@@ -2738,3 +2738,23 @@ min-height: 92px;
 .bar-detail__info-item--fechado {
   color: #C8102E !important;
 }
+/* Status fechado: texto + bolinha vermelhos */
+.bar-card__status--fechado {
+  color: var(--amstel-red) !important;
+}
+
+.bar-card__status--fechado::before {
+  background: var(--amstel-red) !important;
+}
+
+.prox-status--fechado {
+  color: var(--amstel-red) !important;
+}
+
+.prox-status--fechado::before {
+  background: var(--amstel-red) !important;
+}
+
+.bar-detail__info-item--fechado {
+  color: var(--amstel-red) !important;
+}
