@@ -446,6 +446,16 @@ router.get('/bares', async (request, env) => {
   if (estado) { query += ` AND estado = ?`; params.push(estado); }
 
   const { results } = await db.prepare(query).bind(...params).all();
+  for (const bar of results) {
+  const { results: horarios } = await db.prepare(`
+    SELECT dia_semana, aberto, abertura, fechamento
+    FROM bar_horarios
+    WHERE bar_id = ?
+    ORDER BY dia_semana
+  `).bind(bar.id).all();
+
+  bar.horarios = horarios || [];
+}
 
   let bares = results
     .filter(b =>
@@ -548,6 +558,14 @@ router.get('/bares/:id', async (request, env) => {
   if (!/^[a-f0-9]{16}$/.test(id)) return err('ID inválido', 400);
 
   const bar = await db.prepare(`SELECT * FROM bares WHERE id = ? AND ativo = 1 AND aprovado = 1`).bind(id).first();
+  const { results: horarios } = await db.prepare(`
+  SELECT dia_semana, aberto, abertura, fechamento
+  FROM bar_horarios
+  WHERE bar_id = ?
+  ORDER BY dia_semana
+`).bind(id).all();
+
+bar.horarios = horarios || [];
   if (!bar) return err('Bar não encontrado', 404);
 
   const hoje = new Date().toISOString().split('T')[0];
