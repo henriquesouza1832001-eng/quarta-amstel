@@ -105,17 +105,6 @@ function _estadoHtml(tipo) {
       <p class="estado-txt">Volte mais tarde ou veja todos os bares participantes.</p>
       <button class="estado-btn-sec" onclick="window._filtrar('proximos')">Ver todos os bares</button>
     </div>`,
-
-    'sem-promocao': `<div class="estado-wrap">
-      <svg class="estado-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M12 32h40M32 12v40" opacity=".2"/>
-        <path d="M20 44 Q32 20 44 44" stroke-width="2"/>
-        <circle cx="32" cy="20" r="4" stroke-width="2"/>
-      </svg>
-      <p class="estado-titulo">Nenhuma promoção ativa agora.</p>
-      <p class="estado-txt">Veja todos os bares participantes.</p>
-      <button class="estado-btn-sec" onclick="window._filtrar('proximos')">Ver todos os bares</button>
-    </div>`,
   };
 
   return estados[tipo] || estados.vazio;

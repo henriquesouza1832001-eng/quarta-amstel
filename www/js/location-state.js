@@ -17,6 +17,40 @@ function _emitLocationState() {
   });
 }
 
+async function _atualizarCidadeHeader(coords) {
+  if (!coords || coords.lat == null || coords.lng == null) return;
+
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${coords.lat}&lon=${coords.lng}&format=json&accept-language=pt-BR`
+    );
+
+    if (!r.ok) return;
+
+    const d = await r.json();
+    const address = d?.address || {};
+
+    const cidade =
+      address.city ||
+      address.town ||
+      address.municipality ||
+      address.village ||
+      address.city_district ||
+      '';
+
+    if (!cidade) return;
+
+    const label = document.getElementById('location-label');
+    const location = document.getElementById('header-location');
+
+    if (label) label.textContent = cidade;
+    if (location) location.classList.remove('hidden');
+
+  } catch (err) {
+    console.warn('[location] Erro ao identificar cidade:', err);
+  }
+}
+
 window._iniciarGeolocalizacao = function () {
   const state = window._locationState;
   if (state.status === 'ready' && state.coords) return;
@@ -48,15 +82,7 @@ window._iniciarGeolocalizacao = function () {
       window._userLat = coords.lat;
       window._userLng = coords.lng;
       window._userLoc = coords;
-      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${coords.lat}&lon=${coords.lng}&format=json&accept-language=pt-BR`, {
-        headers: { 'User-Agent': 'QuartaAmstel/1.0' }
-      }).then(r => r.json()).then(d => {
-        const cidade = d.address?.city || d.address?.town || d.address?.municipality || '';
-        if (cidade) {
-          const label = document.getElementById('location-label');
-          if (label) label.textContent = cidade;
-        }
-      }).catch(() => {});
+      _atualizarCidadeHeader(coords);
 
       _emitLocationState();
     },
@@ -92,5 +118,9 @@ window._resetGeolocalizacao = function () {
     window._userLat = s.lat;
     window._userLng = s.lng;
     window._userLoc = window._locSalvaRecente;
+
+    setTimeout(() => {
+      _atualizarCidadeHeader(window._locSalvaRecente);
+    }, 0);
   } catch {}
 })();
