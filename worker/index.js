@@ -555,21 +555,21 @@ router.post('/admin/login', async (request, env) => {
     WHERE id = ?
   `).bind(admin.id).run();
 
-  return json({
-    ok: true,
-    token,
- admin: {
-  id: admin.id,
-  nome: admin.nome,
-  email: admin.email,
-  role: admin.role,
-  cidade: admin.cidade,
-  estado: admin.estado,
-  can_security: Number(admin.can_security || 0),
-  can_manage_admins: Number(admin.can_manage_admins || 0),
-  can_manage_all_regions: Number(admin.can_manage_all_regions || 0)
-}
-  });
+return json({
+  ok: true,
+  token,
+  admin: {
+    id: admin.id,
+    nome: admin.nome,
+    email: admin.email,
+    role: admin.role,
+    cidade: admin.cidade,
+    estado: admin.estado,
+    can_security: Number(admin.can_security || 0),
+    can_manage_admins: Number(admin.can_manage_admins || 0),
+    can_manage_all_regions: Number(admin.can_manage_all_regions || 0)
+  }
+});
 });
 
 router.post('/admin/totp/setup', async (request, env) => {
@@ -1356,10 +1356,6 @@ router.get('/admin/stats', async (request, env) => {
     stats
   });
 });
-
-  return json({ ok: true, stats: { bares, subscriptions: subs, campanhas, pushes_enviados: pushes?.total || 0, ameacas_24h: ameacas?.total || 0 } });
-
-
 router.get('/admin/config', async (request, env) => {
   const admin = await requireAuth(request, env, ['master']);
   if (!admin) return err('Não autorizado', 401);
