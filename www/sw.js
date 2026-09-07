@@ -27,8 +27,17 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// ============================================
-// ============================================
+self.clients.matchAll({
+  type: 'window',
+  includeUncontrolled: true
+}).then(clients => {
+  clients.forEach(client => {
+    client.postMessage({
+      tipo: 'DEBUG_PUSH_RECEBIDO',
+      timestamp: Date.now()
+    });
+  });
+});
 self.addEventListener('push', e => {
   let data = { titulo: '🍺 Quarta é Dia de Amstel!', mensagem: 'Tem promoção no bar mais próximo de você.', url: '/?push=1' };
 
