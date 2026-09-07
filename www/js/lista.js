@@ -129,7 +129,7 @@ function _renderCardBar(bar) {
     : bar.bairro;
 
   const statusHtml = bar.horario
-    ? `<div class="bar-card__status">Aberto · ${bar.horario}</div>`
+    ? `<div class="bar-card__status">Aberto até ${bar.horario}</div>`
     : '';
 
   const campanhaHtml = bar.campanha_ativa
@@ -186,13 +186,7 @@ window._filtrar = function (filtro) {
     }
   }
 
-  if (filtro === 'promocao') {
-    bares = bares.filter(b => b.campanha_ativa);
-    if (!bares.length) {
-      document.getElementById('lista-bares').innerHTML = _estadoHtml('sem-promocao');
-      return;
-    }
-  }
+  
 
   const lista = document.getElementById('lista-bares');
   if (!lista) return;
