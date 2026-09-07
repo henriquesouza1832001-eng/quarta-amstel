@@ -48,6 +48,15 @@ window._iniciarGeolocalizacao = function () {
       window._userLat = coords.lat;
       window._userLng = coords.lng;
       window._userLoc = coords;
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${coords.lat}&lon=${coords.lng}&format=json&accept-language=pt-BR`, {
+        headers: { 'User-Agent': 'QuartaAmstel/1.0' }
+      }).then(r => r.json()).then(d => {
+        const cidade = d.address?.city || d.address?.town || d.address?.municipality || '';
+        if (cidade) {
+          const label = document.getElementById('location-label');
+          if (label) label.textContent = cidade;
+        }
+      }).catch(() => {});
 
       _emitLocationState();
     },
