@@ -375,11 +375,19 @@ min-height: 92px;
 
 .azulejo-bar {
   width: 100%;
-  height: clamp(26px, 3.2vh, 32px);
+  height: clamp(38px, 5vh, 48px);
+
   background-image: url('/logos/Azulejo Full.png');
   background-size: auto 100%;
   background-repeat: repeat-x;
   background-position: center;
+
+  border-top: 2px solid rgba(255,255,255,.85);
+
+  box-shadow:
+    0 -3px 12px rgba(0,0,0,.08),
+    inset 0 1px 0 rgba(255,255,255,.35);
+
   flex-shrink: 0;
 }
 .nav-item {
@@ -2707,4 +2715,20 @@ min-height: 92px;
     url('/logos/Logo-256.png')
     center / 72px auto
     no-repeat !important;
+}.azulejo-bar {
+  width: 100%;
+  height: clamp(38px, 5vh, 48px);
+
+  background-image: url('/logos/Azulejo Full.png');
+  background-size: auto 100%;
+  background-repeat: repeat-x;
+  background-position: center;
+
+  border-top: 2px solid rgba(255,255,255,.85);
+
+  box-shadow:
+    0 -3px 12px rgba(0,0,0,.08),
+    inset 0 1px 0 rgba(255,255,255,.35);
+
+  flex-shrink: 0;
 }
