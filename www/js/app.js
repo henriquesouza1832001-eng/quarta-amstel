@@ -327,8 +327,12 @@ async function _iniciarApp() {
 
   if (window._onLocationState) {
     window._onLocationState(async function (state) {
-      if (state.status === 'ready' && state.coords) {
-        // GPS confirmado — agora carrega bares com coordenadas
+      if (state.status === 'locating') {
+        const locAprox = window._locSalvaRecente;
+        if (locAprox && window._mapa && window._renderUserMarker) {
+          window._renderUserMarker(locAprox, true);
+        }
+      } else if (state.status === 'ready' && state.coords) {
         const bares = await window._carregarBares().catch(() => []);
         window._bares = bares;
 
@@ -336,13 +340,12 @@ async function _iniciarApp() {
 
         if (window._mapa) {
           window._mapa.flyTo([state.coords.lat, state.coords.lng], 13, { animate: true, duration: 0.6 });
-          if (window._renderUserMarker) window._renderUserMarker(state.coords);
+          if (window._renderUserMarker) window._renderUserMarker(state.coords, false);
           if (bares.length && window._renderMarcadoresMapa) {
             window._renderMarcadoresMapa(bares);
           }
         }
       } else if (state.status === 'denied' || state.status === 'error') {
-        // Sem GPS — carrega bares sem coordenadas
         const bares = await window._carregarBares().catch(() => []);
         window._bares = bares;
         if (window._renderLista) {
