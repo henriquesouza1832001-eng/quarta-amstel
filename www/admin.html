@@ -406,7 +406,16 @@
 
 <script>
 const WORKER = 'https://quartaamstel-worker.henriquesouza.workers.dev';
-let _token = localStorage.getItem('amstel_admin_token');
+
+function _esc(valor) {
+  return String(valor ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+let _token = null;
 let _adminData = null;
 
 async function _login() {
@@ -452,7 +461,7 @@ async function _loginTotp() {
 function _autenticar(data) {
   _token = data.token;
   _adminData = data.admin;
-  localStorage.setItem('amstel_admin_token', _token);
+  
   document.getElementById('login-view').classList.add('hidden');
   document.getElementById('admin-view').classList.remove('hidden');
   document.getElementById('admin-nome-sidebar').textContent = data.admin.nome;
@@ -468,17 +477,66 @@ function _erroLogin(msg) {
 }
 
 function _logout() {
-  localStorage.removeItem('amstel_admin_token');
+  _token = null;
+  _adminData = null;
+
+  window._emailPendente = null;
+  window._senhaPendente = null;
+
   location.reload();
 }
 
 async function _api(path, opts = {}) {
-  const resp = await fetch(`${WORKER}${path}`, {
-    ...opts,
-    headers: { 'Authorization': `Bearer ${_token}`, 'Content-Type': 'application/json', ...(opts.headers || {}) },
-  });
-  if (resp.status === 401) { _logout(); return null; }
-  return resp.json();
+  if (!_token) {
+    _logout();
+    return null;
+  }
+
+  try {
+    const resp = await fetch(`${WORKER}${path}`, {
+      ...opts,
+      headers: {
+        'Authorization': `Bearer ${_token}`,
+        'Content-Type': 'application/json',
+        ...(opts.headers || {})
+      },
+      cache: 'no-store',
+    });
+
+    if (resp.status === 401 || resp.status === 403) {
+      if (resp.status === 401) {
+        _logout();
+        return null;
+      }
+    }
+
+    const contentType =
+      resp.headers.get('content-type') || '';
+
+    if (!contentType.includes('application/json')) {
+      console.error('[ADMIN API] Resposta inválida:', resp.status);
+      return {
+        ok: false,
+        erro: 'Resposta inválida do servidor'
+      };
+    }
+
+    const data = await resp.json();
+
+    if (!resp.ok && !data.erro) {
+      data.erro = `Erro HTTP ${resp.status}`;
+    }
+
+    return data;
+
+  } catch (e) {
+    console.error('[ADMIN API]', e);
+
+    return {
+      ok: false,
+      erro: 'Não foi possível conectar ao servidor'
+    };
+  }
 }
 
 function _nav(page) {
@@ -520,10 +578,10 @@ function _renderTabelaBares(bares) {
   if (!bares.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3)">Nenhum bar cadastrado</td></tr>'; return; }
   tbody.innerHTML = bares.map(b => `
     <tr>
-      <td><strong>${b.nome}</strong></td>
-      <td>${b.bairro}</td>
-      <td>${b.cidade}</td>
-      <td>${b.estado}</td>
+      <td><strong>${_esc(b.nome)}</strong></td>
+      <td>${_esc(b.bairro)}</td>
+      <td>${_esc(b.cidade)}</td>
+      <td>${_esc(b.estado)}</td>
       <td>
         ${b.ativo ? '' : '<span class="badge badge-off">Inativo</span>'}
         ${b.aprovado ? '<span class="badge badge-ok">Publicado</span>' : '<span class="badge badge-pend">Pendente</span>'}
@@ -645,10 +703,10 @@ async function _carregarPreview() {
   grid.innerHTML = data.bares.map(b => `
     <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
       <div style="font-size:1.5rem;margin-bottom:8px">🍺</div>
-      <strong style="font-size:.95rem">${b.nome}</strong>
-      <div style="font-size:.78rem;color:var(--text2);margin-top:4px">${b.bairro} · ${b.cidade}, ${b.estado}</div>
-      <div style="font-size:.78rem;color:var(--text3);margin-top:2px">${b.endereco}</div>
-      ${b.horario ? `<div style="font-size:.75rem;color:var(--text3);margin-top:4px">⏰ ${b.horario}</div>` : ''}
+      <strong style="font-size:.95rem">${_esc(b.nome)}</strong>
+      <div style="font-size:.78rem;color:var(--text2);margin-top:4px">${_esc(b.bairro)} · ${_esc(b.cidade)}, ${_esc(b.estado)}</div>
+      <div style="font-size:.78rem;color:var(--text3);margin-top:2px">${_esc(b.endereco)}</div>
+      ${b.horario ? `<div style="font-size:.75rem;color:var(--text3);margin-top:4px">⏰ ${_esc(b.horario)}</div>` : ''}
       <div style="display:flex;gap:6px;margin-top:10px">
         <span class="badge badge-ok">Publicado</span>
         <span style="font-size:.7rem;color:var(--text3);padding:3px 0">${b.lat.toFixed(4)}, ${b.lng.toFixed(4)}</span>
@@ -687,10 +745,10 @@ async function _carregarCampanhas() {
   }
   tbody.innerHTML = data.campanhas.map(c => `
     <tr>
-      <td><strong>${c.titulo}</strong></td>
-      <td style="font-size:.8rem">${c.promocao}</td>
-      <td style="font-size:.8rem">${c.bar_nome || 'Todos'}</td>
-      <td style="font-size:.8rem">${c.cidade || 'Nacional'}</td>
+      <td><strong>${_esc(c.titulo)}</strong></td>
+      <td style="font-size:.8rem">${_esc(c.promocao)}</td>
+      <td style="font-size:.8rem">${_esc(c.bar_nome || 'Todos')}</td>
+      <td style="font-size:.8rem">${_esc(c.cidade || 'Nacional')}</td>
       <td style="font-size:.78rem;color:var(--text3)">${c.inicio} → ${c.fim}</td>
       <td><span class="badge ${c.ativo ? 'badge-ok' : 'badge-off'}">${c.ativo ? 'Ativa' : 'Inativa'}</span></td>
     </tr>
@@ -766,11 +824,11 @@ async function _carregarLogs(nivel) {
   tbody.innerHTML = data.logs.map(l => `
     <tr>
       <td style="font-size:.75rem;color:var(--text3);white-space:nowrap">${l.criado_em?.replace('T',' ').slice(0,16)}</td>
-      <td><span class="badge badge-ameaca" style="font-size:.68rem">${l.tipo}</span></td>
+      <td><span class="badge badge-ameaca" style="font-size:.68rem">${_esc(l.tipo)}</span></td>
       <td>${nivelLabel[l.nivel] || l.nivel}</td>
       <td><code style="font-size:.8rem">${l.ip}</code></td>
-      <td>${l.pais || '—'}</td>
-      <td style="font-size:.78rem;color:var(--text3)">${l.rota || '—'}</td>
+      <td>${_esc(l.pais || '—')}</td>
+      <td style="font-size:.78rem;color:var(--text3)">${_esc(l.rota || '—')}</td>
       <td>${l.bloqueado ? '🔴 Sim' : '—'}</td>
     </tr>
   `).join('');
@@ -821,13 +879,6 @@ async function _confirmarTotp() {
   alert('2FA ativado com sucesso! Use o Google Authenticator no próximo login.');
 }
 
-if (_token) {
-  document.getElementById('login-view').classList.add('hidden');
-  document.getElementById('admin-view').classList.remove('hidden');
-  document.getElementById('dash-data').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-  _carregarStats();
-  _carregarBares();
-}
 </script>
 </body>
 </html>
