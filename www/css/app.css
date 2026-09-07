@@ -387,6 +387,7 @@ html, body {
   background-repeat: repeat-x;
   background-position: center;
   flex-shrink: 0;
+  background-color: transparent;
 }
 
 .nav-item {
@@ -1695,7 +1696,7 @@ html, body {
 }
 
 .rota-opcoes {
-  padding: 8px 0 16px;
+  padding: 8px 0 8px;
 }
 
 .rota-opcao {
