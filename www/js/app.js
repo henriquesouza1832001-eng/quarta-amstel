@@ -255,7 +255,76 @@ window._fecharModalRota = function () {
   document.getElementById('modal-rota')?.classList.add('hidden');
   document.body.style.overflow = '';
 };
+window._statusHorarioBar = function(bar) {
+  const horarios = Array.isArray(bar?.horarios) ? bar.horarios : [];
+  if (!horarios.length) return null;
 
+  const agora = new Date();
+  const dia = agora.getDay();
+  const minutos = agora.getHours() * 60 + agora.getMinutes();
+
+  const paraMin = h => {
+    if (!h) return null;
+    const [hh, mm] = h.split(':').map(Number);
+    return hh * 60 + mm;
+  };
+
+  // Horário de hoje
+  const hoje = horarios.find(h => Number(h.dia_semana) === dia);
+
+  if (hoje && Number(hoje.aberto) === 1) {
+    const abre = paraMin(hoje.abertura);
+    const fecha = paraMin(hoje.fechamento);
+
+    if (abre !== null && fecha !== null) {
+      // Fecha no mesmo dia
+      if (fecha > abre && minutos >= abre && minutos < fecha) {
+        return {
+          aberto: true,
+          texto: `Aberto até ${hoje.fechamento}`
+        };
+      }
+
+      // Atravessa meia-noite
+      if (fecha <= abre && minutos >= abre) {
+        return {
+          aberto: true,
+          texto: `Aberto até ${hoje.fechamento}`
+        };
+      }
+    }
+  }
+
+  // Verifica se ainda está aberto pelo dia anterior
+  const diaAnterior = (dia + 6) % 7;
+  const ontem = horarios.find(h => Number(h.dia_semana) === diaAnterior);
+
+  if (ontem && Number(ontem.aberto) === 1) {
+    const abre = paraMin(ontem.abertura);
+    const fecha = paraMin(ontem.fechamento);
+
+    if (
+      abre !== null &&
+      fecha !== null &&
+      fecha <= abre &&
+      minutos < fecha
+    ) {
+      return {
+        aberto: true,
+        texto: `Aberto até ${ontem.fechamento}`
+      };
+    }
+  }
+
+  return {
+    aberto: false,
+    texto: 'Fechado agora'
+  };
+};
+
+window._barAbertoAgora = function(bar) {
+  return window._statusHorarioBar(bar)?.aberto ?? null;
+};
 window._verBar = function (id) {
   const bar = window._bares.find(b => b.id === id);
   if (!bar) return;

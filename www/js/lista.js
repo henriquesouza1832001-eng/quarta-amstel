@@ -117,20 +117,24 @@ function _renderCardBar(bar) {
       : `${bar.distancia_km.toFixed(1)} km · ${bar.bairro}`
     : bar.bairro;
 
-  const abertoAgora =
-    typeof window._barAbertoAgora === 'function'
-      ? window._barAbertoAgora(bar)
-      : null;
+  const statusHorario =
+  typeof window._statusHorarioBar === 'function'
+    ? window._statusHorarioBar(bar)
+    : null;
 
-  let statusHtml = '';
+let statusHtml = '';
 
-  if (abertoAgora === true) {
-    statusHtml = `<div class="bar-card__status">Aberto agora · ${bar.horario}</div>`;
-  } else if (abertoAgora === false) {
-    statusHtml = `<div class="bar-card__status bar-card__status--fechado">Fechado agora</div>`;
-  } else if (bar.horario) {
-    statusHtml = `<div class="bar-card__horario">${bar.horario}</div>`;
-  }
+if (statusHorario?.aberto === true) {
+  statusHtml = `
+    <div class="bar-card__status">
+      ${statusHorario.texto}
+    </div>`;
+} else if (statusHorario?.aberto === false) {
+  statusHtml = `
+    <div class="bar-card__status bar-card__status--fechado">
+      Fechado agora
+    </div>`;
+}
 
   const campanhaHtml = bar.campanha_ativa
     ? `<div class="bar-card__campanha">
