@@ -152,6 +152,7 @@
     <div class="sidebar-logo">
       <span>🍺 AMSTEL ADMIN</span>
       <small id="admin-nome-sidebar"></small>
+<small id="admin-cargo-sidebar" style="margin-top:3px"></small>
     </div>
     <div class="nav-item active" onclick="_nav('dashboard')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
@@ -165,7 +166,7 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
       Preview Campanha
     </div>
-    <div class="nav-item" onclick="_nav('push')">
+    <div class="nav-item" id="nav-push" onclick="_nav('push')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       Enviar Push
     </div>
@@ -235,8 +236,8 @@
       <div class="page-header">
         <h2>Bares</h2>
         <div class="page-header-actions">
-          <button class="btn-sm btn-sm-g" onclick="_abrirImport()">📁 Importar CSV</button>
-          <button class="btn-sm btn-sm-r" onclick="_abrirModalBar()">+ Adicionar bar</button>
+          <button id="btn-importar-bares" class="btn-sm btn-sm-g" onclick="_abrirImport()">📁 Importar CSV</button>
+<button id="btn-adicionar-bar" class="btn-sm btn-sm-r" onclick="_abrirModalBar()">+ Adicionar bar</button>
         </div>
       </div>
       <div class="filters">
@@ -296,12 +297,27 @@
     <div id="page-campanhas" class="page">
       <div class="page-header">
         <h2>Campanhas</h2>
-        <button class="btn-sm btn-sm-r" onclick="_abrirModalCampanha()">+ Nova campanha</button>
+        <button id="btn-nova-campanha" class="btn-sm btn-sm-r" onclick="_abrirModalCampanha()">+ Nova campanha</button>
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Título</th><th>Promoção</th><th>Bar</th><th>Cidade</th><th>Período</th><th>Status</th></tr></thead>
-          <tbody id="campanhas-tbody"><tr><td colspan="6" style="text-align:center;color:var(--text3)">Carregando...</td></tr></tbody>
+          <thead>
+  <tr>
+    <th>Título</th>
+    <th>Promoção</th>
+    <th>Abrangência</th>
+    <th>Período</th>
+    <th>Status</th>
+    <th>Ações</th>
+  </tr>
+</thead>
+<tbody id="campanhas-tbody">
+  <tr>
+    <td colspan="6" style="text-align:center;color:var(--text3)">
+      Carregando...
+    </td>
+  </tr>
+</tbody>
         </table>
       </div>
     </div>
@@ -326,10 +342,12 @@
 
         <div class="field">
           <label>Perfil</label>
-          <select id="adm-role">
-            <option value="admin">Administrador regional</option>
-            <option value="viewer">Somente visualização</option>
-          </select>
+          <select id="adm-role" class="filter-select" style="width:100%">
+  <option value="gestor">Gestor</option>
+  <option value="publicador">Publicador</option>
+  <option value="cadastrador">Cadastrador</option>
+  <option value="consulta">Consulta</option>
+</select>
         </div>
 
         <button class="btn btn-r" onclick="_criarAdmin()">Criar administrador</button>
@@ -410,7 +428,7 @@
 <!-- MODAL CAMPANHA -->
 <div id="modal-campanha" class="modal-overlay hidden">
   <div class="modal-box">
-    <h3>Nova campanha</h3>
+    <h3 id="modal-campanha-titulo">Nova campanha</h3>
 
     <div class="field">
       <label>Título *</label>
@@ -530,7 +548,7 @@
   <div class="modal-box">
     <h3>Importar bares via CSV</h3>
     <p style="font-size:.82rem;color:var(--text2);margin-bottom:14px">
-      Faça upload de um arquivo CSV ou XLSX. Os bares importados ficam <strong>pendentes de aprovação</strong> até você revisar na aba Preview.
+      Faça upload de um arquivo CSV ou XLSX. O status de publicação será definido automaticamente de acordo com o seu nível de acesso.
     </p>
     <a href="#" onclick="_downloadTemplate()" style="font-size:.8rem;color:var(--red);text-decoration:none;display:block;margin-bottom:14px">
       📥 Baixar template CSV
@@ -576,6 +594,56 @@ function _esc(valor) {
 }
 let _token = null;
 let _adminData = null;
+
+function _cargo() {
+  return String(_adminData?.role || '').trim().toLowerCase();
+}
+
+function _podeCriarConteudo() {
+  return ['master', 'gestor', 'publicador', 'cadastrador'].includes(_cargo());
+}
+
+function _podePublicarConteudo() {
+  return ['master', 'gestor', 'publicador'].includes(_cargo());
+}
+
+function _podeAprovarConteudo() {
+  return ['master', 'gestor', 'publicador'].includes(_cargo());
+}
+
+function _podeEditarPublicado() {
+  return ['master', 'gestor', 'publicador'].includes(_cargo());
+}
+
+function _podeExcluirConteudo() {
+  return ['master', 'gestor'].includes(_cargo());
+}
+
+function _podeGerenciarAdminsUI() {
+  return (
+    ['master', 'gestor'].includes(_cargo()) &&
+    Number(_adminData?.can_manage_admins || 0) === 1
+  );
+}
+
+function _acessoNacional() {
+  return (
+    _cargo() === 'master' ||
+    Number(_adminData?.can_manage_all_regions || 0) === 1
+  );
+}
+
+function _labelCargo(role) {
+  const labels = {
+    master: 'Master',
+    gestor: 'Gestor',
+    publicador: 'Publicador',
+    cadastrador: 'Cadastrador',
+    consulta: 'Consulta'
+  };
+
+  return labels[String(role || '').toLowerCase()] || role || '—';
+}
 
 async function _login() {
   const email = document.getElementById('l-email').value;
@@ -623,7 +691,18 @@ function _autenticar(data) {
   
   document.getElementById('login-view').classList.add('hidden');
   document.getElementById('admin-view').classList.remove('hidden');
-  document.getElementById('admin-nome-sidebar').textContent = data.admin.nome;
+  document.getElementById('admin-nome-sidebar').textContent =
+  data.admin.nome;
+
+document.getElementById('admin-cargo-sidebar').textContent =
+  `${_labelCargo(data.admin.role)}${
+    data.admin.cidade
+      ? ` · ${data.admin.cidade}/${data.admin.estado}`
+      : data.admin.estado
+        ? ` · ${data.admin.estado}`
+        : ''
+  }`;
+
 _aplicarPermissoesUI();
   document.getElementById('dash-data').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   _carregarStats();
@@ -631,13 +710,35 @@ _aplicarPermissoesUI();
 }
 function _aplicarPermissoesUI() {
   const admin = _adminData || {};
+  const cargo = _cargo();
 
-  const navSeguranca = document.getElementById('nav-seguranca');
-  const cardAmeacas = document.getElementById('stat-ameacas-card');
-  const navAdmins = document.getElementById('nav-admins');
-  const navConfig = document.getElementById('nav-config');
+  const navSeguranca =
+    document.getElementById('nav-seguranca');
 
-  if (Number(admin.can_security) === 1) {
+  const cardAmeacas =
+    document.getElementById('stat-ameacas-card');
+
+  const navAdmins =
+    document.getElementById('nav-admins');
+
+  const navConfig =
+    document.getElementById('nav-config');
+
+  const navPush =
+    document.getElementById('nav-push');
+
+  const btnAdicionarBar =
+    document.getElementById('btn-adicionar-bar');
+
+  const btnImportarBares =
+    document.getElementById('btn-importar-bares');
+
+  const btnNovaCampanha =
+    document.getElementById('btn-nova-campanha');
+
+
+  // Segurança
+  if (Number(admin.can_security || 0) === 1) {
     navSeguranca?.classList.remove('hidden');
     cardAmeacas?.classList.remove('hidden');
   } else {
@@ -645,18 +746,62 @@ function _aplicarPermissoesUI() {
     cardAmeacas?.classList.add('hidden');
   }
 
-  if (Number(admin.can_manage_admins) === 1) {
+
+  // Administradores
+  if (_podeGerenciarAdminsUI()) {
     navAdmins?.classList.remove('hidden');
   } else {
     navAdmins?.classList.add('hidden');
   }
 
-  if (admin.role === 'master') {
+
+  // Configuração somente Master
+  if (cargo === 'master') {
     navConfig?.classList.remove('hidden');
   } else {
     navConfig?.classList.add('hidden');
   }
+
+
+  // Push: Master / Gestor / Publicador
+  if (_podePublicarConteudo()) {
+    navPush?.classList.remove('hidden');
+  } else {
+    navPush?.classList.add('hidden');
+  }
+
+
+  // Criação de conteúdo
+  if (_podeCriarConteudo()) {
+    btnAdicionarBar?.classList.remove('hidden');
+    btnImportarBares?.classList.remove('hidden');
+    btnNovaCampanha?.classList.remove('hidden');
+  } else {
+    btnAdicionarBar?.classList.add('hidden');
+    btnImportarBares?.classList.add('hidden');
+    btnNovaCampanha?.classList.add('hidden');
+  }
+
+
+  // Região no formulário de bar
+  const cidadeBar =
+    document.getElementById('b-cidade');
+
+  const estadoBar =
+    document.getElementById('b-estado');
+
+  const restringeRegiao =
+    !_acessoNacional();
+
+  if (cidadeBar) {
+    cidadeBar.readOnly = restringeRegiao && !!admin.cidade;
+  }
+
+  if (estadoBar) {
+    estadoBar.readOnly = restringeRegiao;
+  }
 }
+
 
 function _erroLogin(msg) {
   const el = document.getElementById('login-erro');
@@ -728,10 +873,24 @@ async function _api(path, opts = {}) {
 }
 
 function _nav(page) {
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.getElementById(`page-${page}`)?.classList.add('active');
+  document
+    .querySelectorAll('.nav-item')
+    .forEach(el => el.classList.remove('active'));
+
+  const itemAtivo = [...document.querySelectorAll('.nav-item')]
+    .find(el =>
+      el.getAttribute('onclick') === `_nav('${page}')`
+    );
+
+  itemAtivo?.classList.add('active');
+
+  document
+    .querySelectorAll('.page')
+    .forEach(p => p.classList.remove('active'));
+
+  document
+    .getElementById(`page-${page}`)
+    ?.classList.add('active');
 
   if (page === 'bares') _carregarBares();
   if (page === 'preview') _carregarPreview();
@@ -769,28 +928,110 @@ async function _carregarBares() {
 }
 
 function _renderTabelaBares(bares) {
-  const tbody = document.getElementById('bares-tbody');
-  if (!bares.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3)">Nenhum bar cadastrado</td></tr>'; return; }
-  tbody.innerHTML = bares.map(b => `
-    <tr>
-      <td><strong>${_esc(b.nome)}</strong></td>
-      <td>${_esc(b.bairro)}</td>
-      <td>${_esc(b.cidade)}</td>
-      <td>${_esc(b.estado)}</td>
-      <td>
-        ${b.ativo ? '' : '<span class="badge badge-off">Inativo</span>'}
-        ${b.aprovado ? '<span class="badge badge-ok">Publicado</span>' : '<span class="badge badge-pend">Pendente</span>'}
-      </td>
-      <td>
-        <div class="td-actions">
-          ${!b.aprovado ? `<button class="btn-sm btn-sm-green" onclick="_aprovarBar('${b.id}')">✓ Aprovar</button>` : ''}
-          <button class="btn-sm btn-sm-g" onclick="_editarBar('${b.id}')">Editar</button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
-}
+  const tbody =
+    document.getElementById('bares-tbody');
 
+  if (!bares.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6"
+            style="text-align:center;color:var(--text3)">
+          Nenhum bar cadastrado
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = bares.map(b => {
+    const pendente =
+      Number(b.aprovado) !== 1;
+
+    const podeAprovar =
+      pendente &&
+      _podeAprovarConteudo();
+
+    const podeEditar =
+      _podeEditarPublicado() ||
+      (
+        _cargo() === 'cadastrador' &&
+        pendente &&
+        b.criado_por === _adminData?.id
+      );
+
+    const podeExcluir =
+      _podeExcluirConteudo();
+
+    const botoes = [];
+
+    if (podeAprovar) {
+      botoes.push(`
+        <button
+          class="btn-sm btn-sm-green"
+          onclick="_aprovarBar('${b.id}')"
+        >
+          ✓ Aprovar
+        </button>
+      `);
+    }
+
+    if (podeEditar) {
+      botoes.push(`
+        <button
+          class="btn-sm btn-sm-g"
+          onclick="_editarBar('${b.id}')"
+        >
+          Editar
+        </button>
+      `);
+    }
+
+    if (podeExcluir) {
+      botoes.push(`
+        <button
+          class="btn-sm btn-sm-r"
+          onclick="_excluirBar('${b.id}')"
+        >
+          Excluir
+        </button>
+      `);
+    }
+
+    return `
+      <tr>
+        <td>
+          <strong>${_esc(b.nome)}</strong>
+        </td>
+
+        <td>${_esc(b.bairro)}</td>
+        <td>${_esc(b.cidade)}</td>
+        <td>${_esc(b.estado)}</td>
+
+        <td>
+          ${
+            b.ativo
+              ? ''
+              : '<span class="badge badge-off">Inativo</span>'
+          }
+
+          ${
+            Number(b.aprovado) === 1
+              ? '<span class="badge badge-ok">Publicado</span>'
+              : '<span class="badge badge-pend">Pendente</span>'
+          }
+        </td>
+
+        <td>
+          ${
+            botoes.length
+              ? `<div class="td-actions">${botoes.join('')}</div>`
+              : '<span style="color:var(--text3);font-size:.75rem">Somente leitura</span>'
+          }
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
 function _filtrarBares(q) {
   const filtrados = _baresAdmin.filter(b =>
     b.nome.toLowerCase().includes(q.toLowerCase()) ||
@@ -803,22 +1044,137 @@ function _filtrarBaresPor(aprovado) {
   const filtrados = aprovado === '' ? _baresAdmin : _baresAdmin.filter(b => b.aprovado == aprovado);
   _renderTabelaBares(filtrados);
 }
-
 async function _aprovarBar(id) {
-  if (!confirm('Publicar este bar na campanha?')) return;
-  await _api(`/admin/bares/${id}/aprovar`, { method: 'PUT' });
+  const bar =
+    _baresAdmin.find(b => b.id === id);
+
+  if (!bar) return;
+
+  if (
+    !confirm(
+      `Aprovar e publicar o bar "${bar.nome}"?`
+    )
+  ) {
+    return;
+  }
+
+  const data =
+    await _api(
+      `/admin/bares/${id}/aprovar`,
+      {
+        method: 'PUT'
+      }
+    );
+
+  if (!data?.ok) {
+    alert(
+      data?.erro ||
+      'Não foi possível aprovar o bar.'
+    );
+    return;
+  }
+
   await _carregarBares();
+  await _carregarStats();
+}
+async function _excluirBar(id) {
+  const bar =
+    _baresAdmin.find(b => b.id === id);
+
+  if (!bar) return;
+
+  if (
+    !confirm(
+      `Excluir o bar "${bar.nome}"?\n\nEssa ação não poderá ser desfeita.`
+    )
+  ) {
+    return;
+  }
+
+  const data = await _api(
+    `/admin/bares/${id}`,
+    {
+      method: 'DELETE'
+    }
+  );
+
+  if (!data?.ok) {
+    alert(
+      data?.erro ||
+      'Não foi possível excluir o bar.'
+    );
+    return;
+  }
+
+  await _carregarBares();
+  await _carregarStats();
 }
 
 function _abrirModalBar(id) {
-  document.getElementById('modal-bar').classList.remove('hidden');
-  document.getElementById('modal-bar-titulo').textContent = id ? 'Editar bar' : 'Adicionar bar';
-  ['b-nome','b-end','b-bairro','b-tel','b-hor','b-lat','b-lng','b-foto'].forEach(f => document.getElementById(f).value = '');
-  document.getElementById('b-foto-preview').style.display = 'none';
-  document.getElementById('b-cidade').value = 'Belo Horizonte';
-  document.getElementById('b-estado').value = 'MG';
-  document.getElementById('modal-bar-erro').classList.add('hidden');
-  window._editandoBarId = id || null;
+  if (!id && !_podeCriarConteudo()) {
+    alert('Seu perfil possui acesso somente para consulta.');
+    return;
+  }
+
+  document
+    .getElementById('modal-bar')
+    .classList.remove('hidden');
+
+  document
+    .getElementById('modal-bar-titulo')
+    .textContent =
+      id ? 'Editar bar' : 'Adicionar bar';
+
+  [
+    'b-nome',
+    'b-end',
+    'b-bairro',
+    'b-tel',
+    'b-hor',
+    'b-lat',
+    'b-lng',
+    'b-foto'
+  ].forEach(f => {
+    document.getElementById(f).value = '';
+  });
+
+  document
+    .getElementById('b-foto-preview')
+    .style.display = 'none';
+
+  const cidade =
+    document.getElementById('b-cidade');
+
+  const estado =
+    document.getElementById('b-estado');
+
+  if (!_acessoNacional()) {
+    cidade.value =
+      _adminData?.cidade || '';
+
+    estado.value =
+      _adminData?.estado || '';
+  } else {
+    cidade.value =
+      'Belo Horizonte';
+
+    estado.value =
+      'MG';
+  }
+
+  cidade.readOnly =
+    !_acessoNacional() &&
+    !!_adminData?.cidade;
+
+  estado.readOnly =
+    !_acessoNacional();
+
+  document
+    .getElementById('modal-bar-erro')
+    .classList.add('hidden');
+
+  window._editandoBarId =
+    id || null;
 }
 
 function _fecharModalBar() { document.getElementById('modal-bar').classList.add('hidden'); }
@@ -882,9 +1238,28 @@ async function _salvarBar() {
   const method = window._editandoBarId ? 'PUT' : 'POST';
   const data = await _api(path, { method, body: JSON.stringify(body) });
 
-  if (!data?.ok) { document.getElementById('modal-bar-erro').textContent = data?.erro || 'Erro ao salvar'; return; }
-  _fecharModalBar();
-  _carregarBares();
+if (!data?.ok) {
+  const el =
+    document.getElementById('modal-bar-erro');
+
+  el.textContent =
+    data?.erro || 'Erro ao salvar';
+
+  el.classList.remove('hidden');
+  return;
+}
+
+if (!window._editandoBarId && data.status) {
+  alert(
+    data.status === 'pendente'
+      ? '✅ Bar cadastrado e enviado para aprovação.'
+      : '✅ Bar cadastrado e publicado.'
+  );
+}
+
+_fecharModalBar();
+await _carregarBares();
+await _carregarStats();
 }
 
 async function _carregarPreview() {
@@ -931,58 +1306,328 @@ async function _enviarPush() {
   document.getElementById('push-confirm').value = '';
 }
 
+let _campanhasAdmin = [];
+
 async function _carregarCampanhas() {
-  const data = await _api('/admin/campanhas');
-  const tbody = document.getElementById('campanhas-tbody');
-  if (!data?.ok || !data.campanhas.length) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3)">Nenhuma campanha</td></tr>';
+  const data =
+    await _api('/admin/campanhas');
+
+  const tbody =
+    document.getElementById('campanhas-tbody');
+
+  if (
+    !data?.ok ||
+    !Array.isArray(data.campanhas) ||
+    !data.campanhas.length
+  ) {
+    _campanhasAdmin = [];
+
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6"
+            style="text-align:center;color:var(--text3)">
+          Nenhuma campanha
+        </td>
+      </tr>
+    `;
+
     return;
   }
-  tbody.innerHTML = data.campanhas.map(c => `
-    <tr>
-      <td><strong>${_esc(c.titulo)}</strong></td>
-      <td style="font-size:.8rem">${_esc(c.promocao)}</td>
-      <td style="font-size:.8rem">${_esc(c.bar_nome || 'Todos')}</td>
-      <td style="font-size:.8rem">${_esc(c.cidade || 'Nacional')}</td>
-      <td style="font-size:.78rem;color:var(--text3)">${c.inicio} → ${c.fim}</td>
-      <td><span class="badge ${c.ativo ? 'badge-ok' : 'badge-off'}">${c.ativo ? 'Ativa' : 'Inativa'}</span></td>
-    </tr>
-  `).join('');
-}
 
+  _campanhasAdmin =
+    data.campanhas;
+
+  tbody.innerHTML =
+    data.campanhas.map(c => {
+
+      let abrangencia = '🌎 Todos os bares';
+
+      if (c.bar_id) {
+        abrangencia =
+          `🍺 ${_esc(c.bar_nome || 'Bar específico')}`;
+      } else if (c.cidade) {
+        abrangencia =
+          `📍 ${_esc(c.cidade)} / ${_esc(c.estado || '')}`;
+      } else if (c.estado) {
+        abrangencia =
+          `🗺️ ${_esc(c.estado)}`;
+      }
+
+
+      const status =
+        String(
+          c.status ||
+          (c.ativo ? 'publicada' : 'encerrada')
+        ).toLowerCase();
+
+
+      let badgeStatus = '';
+
+      if (status === 'pendente') {
+        badgeStatus =
+          '<span class="badge badge-pend">Pendente</span>';
+      } else if (status === 'publicada') {
+        badgeStatus =
+          '<span class="badge badge-ok">Publicada</span>';
+      } else if (status === 'rejeitada') {
+        badgeStatus =
+          '<span class="badge badge-ameaca">Rejeitada</span>';
+      } else {
+        badgeStatus =
+          `<span class="badge badge-off">${_esc(status)}</span>`;
+      }
+
+
+      const podeAprovar =
+        status === 'pendente' &&
+        _podeAprovarConteudo();
+
+
+      const podeEditar =
+        _podeEditarPublicado() ||
+        (
+          _cargo() === 'cadastrador' &&
+          status === 'pendente' &&
+          c.criado_por === _adminData?.id
+        );
+
+
+      const podeExcluir =
+        _podeExcluirConteudo();
+
+
+      const botoes = [];
+
+
+      if (podeAprovar) {
+        botoes.push(`
+          <button
+            class="btn-sm btn-sm-green"
+            onclick="_aprovarCampanha('${c.id}')"
+          >
+            ✓ Aprovar
+          </button>
+        `);
+      }
+
+
+      if (podeEditar) {
+        botoes.push(`
+          <button
+            class="btn-sm btn-sm-g"
+            onclick="_editarCampanha('${c.id}')"
+          >
+            Editar
+          </button>
+        `);
+      }
+
+
+      if (podeExcluir) {
+        botoes.push(`
+          <button
+            class="btn-sm btn-sm-r"
+            onclick="_excluirCampanha('${c.id}')"
+          >
+            Excluir
+          </button>
+        `);
+      }
+
+
+      return `
+        <tr>
+          <td>
+            <strong>${_esc(c.titulo)}</strong>
+          </td>
+
+          <td style="font-size:.8rem">
+            ${_esc(c.promocao)}
+          </td>
+
+          <td style="font-size:.8rem">
+            ${abrangencia}
+          </td>
+
+          <td style="font-size:.78rem;color:var(--text3)">
+            ${_esc(c.inicio)} → ${_esc(c.fim)}
+          </td>
+
+          <td>
+            ${badgeStatus}
+          </td>
+
+          <td>
+            ${
+              botoes.length
+                ? `<div class="td-actions">${botoes.join('')}</div>`
+                : '<span style="color:var(--text3);font-size:.75rem">Somente leitura</span>'
+            }
+          </td>
+        </tr>
+      `;
+    }).join('');
+}
 let _campanhaBares = [];
 
-async function _abrirModalCampanha() {
-  const modal = document.getElementById('modal-campanha');
-  const result = document.getElementById('campanha-result');
+async function _abrirModalCampanha(id = null) {
+  if (!id && !_podeCriarConteudo()) {
+    alert('Seu perfil possui acesso somente para consulta.');
+    return;
+  }
+
+  const modal =
+    document.getElementById('modal-campanha');
+
+  const result =
+    document.getElementById('campanha-result');
+
+  const tituloModal =
+    document.getElementById('modal-campanha-titulo');
+
+  const btn =
+    document.getElementById('btn-salvar-campanha');
 
   result.classList.add('hidden');
   result.textContent = '';
+
+  window._editandoCampanhaId =
+    id || null;
 
   document.getElementById('c-titulo').value = '';
   document.getElementById('c-promocao').value = '';
   document.getElementById('c-descricao').value = '';
 
-  document.getElementById('c-abrangencia').value = 'nacional';
+  document.getElementById('c-abrangencia').value =
+    _acessoNacional()
+      ? 'nacional'
+      : (_adminData?.cidade ? 'cidade' : 'estado');
 
-  const hoje = new Date().toISOString().split('T')[0];
-  document.getElementById('c-inicio').value = hoje;
-  document.getElementById('c-fim').value = hoje;
+  const hoje =
+    new Date()
+      .toISOString()
+      .split('T')[0];
+
+  document.getElementById('c-inicio').value =
+    hoje;
+
+  document.getElementById('c-fim').value =
+    hoje;
 
   _campanhaBares = [];
 
-  const data = await _api('/admin/bares');
+  const data =
+    await _api('/admin/bares');
 
-  if (data?.ok && Array.isArray(data.bares)) {
-    _campanhaBares = data.bares;
+  if (
+    data?.ok &&
+    Array.isArray(data.bares)
+  ) {
+    _campanhaBares =
+      data.bares;
   }
 
   _preencherEstadosCampanha();
+
+
+  const nacionalOption =
+    document.querySelector(
+      '#c-abrangencia option[value="nacional"]'
+    );
+
+  if (nacionalOption) {
+    nacionalOption.disabled =
+      !_acessoNacional();
+  }
+
+
+  if (id) {
+    const campanha =
+      _campanhasAdmin.find(c => c.id === id);
+
+    if (!campanha) {
+      alert('Campanha não encontrada.');
+      return;
+    }
+
+    tituloModal.textContent =
+      'Editar campanha';
+
+    btn.textContent =
+      'Salvar alterações';
+
+    document.getElementById('c-titulo').value =
+      campanha.titulo || '';
+
+    document.getElementById('c-promocao').value =
+      campanha.promocao || '';
+
+    document.getElementById('c-descricao').value =
+      campanha.descricao || '';
+
+    document.getElementById('c-inicio').value =
+      campanha.inicio || '';
+
+    document.getElementById('c-fim').value =
+      campanha.fim || '';
+
+
+    let abrangencia = 'nacional';
+
+    if (campanha.cidade) {
+      abrangencia = 'cidade';
+    } else if (campanha.estado) {
+      abrangencia = 'estado';
+    }
+
+    document.getElementById('c-abrangencia').value =
+      abrangencia;
+
+    document.getElementById('c-estado').value =
+      campanha.estado || '';
+
+    _campanhaEstadoMudou();
+
+    document.getElementById('c-cidade').value =
+      campanha.cidade || '';
+
+
+    /*
+      O Worker atual permite editar conteúdo/datas,
+      mas não altera o escopo da campanha.
+    */
+    document.getElementById('c-abrangencia').disabled =
+      true;
+
+    document.getElementById('c-estado').disabled =
+      true;
+
+    document.getElementById('c-cidade').disabled =
+      true;
+
+  } else {
+    tituloModal.textContent =
+      'Nova campanha';
+
+    btn.textContent =
+      _cargo() === 'cadastrador'
+        ? 'Enviar para aprovação'
+        : 'Publicar campanha';
+
+    document.getElementById('c-abrangencia').disabled =
+      false;
+
+    document.getElementById('c-estado').disabled =
+      false;
+
+    document.getElementById('c-cidade').disabled =
+      false;
+  }
+
   _campanhaAbrangenciaMudou();
 
   modal.classList.remove('hidden');
 }
-
 function _preencherEstadosCampanha() {
   const select = document.getElementById('c-estado');
 
@@ -1071,31 +1716,53 @@ function _fecharModalCampanha() {
     .getElementById('modal-campanha')
     .classList.add('hidden');
 }
+function _editarCampanha(id) {
+  _abrirModalCampanha(id);
+}
 
 async function _salvarCampanha() {
   const titulo =
-    document.getElementById('c-titulo').value.trim();
+    document
+      .getElementById('c-titulo')
+      .value
+      .trim();
 
   const promocao =
-    document.getElementById('c-promocao').value.trim();
+    document
+      .getElementById('c-promocao')
+      .value
+      .trim();
 
   const descricao =
-    document.getElementById('c-descricao').value.trim();
+    document
+      .getElementById('c-descricao')
+      .value
+      .trim();
 
   const abrangencia =
-    document.getElementById('c-abrangencia').value;
+    document
+      .getElementById('c-abrangencia')
+      .value;
 
   const estado =
-    document.getElementById('c-estado').value;
+    document
+      .getElementById('c-estado')
+      .value;
 
   const cidade =
-    document.getElementById('c-cidade').value;
+    document
+      .getElementById('c-cidade')
+      .value;
 
   const inicio =
-    document.getElementById('c-inicio').value;
+    document
+      .getElementById('c-inicio')
+      .value;
 
   const fim =
-    document.getElementById('c-fim').value;
+    document
+      .getElementById('c-fim')
+      .value;
 
   const result =
     document.getElementById('campanha-result');
@@ -1105,13 +1772,21 @@ async function _salvarCampanha() {
 
   result.classList.remove('hidden');
 
-  if (!titulo || !promocao || !inicio || !fim) {
+
+  if (
+    !titulo ||
+    !promocao ||
+    !inicio ||
+    !fim
+  ) {
     result.textContent =
       '❌ Preencha título, promoção, início e fim.';
     return;
   }
 
+
   if (
+    !window._editandoCampanhaId &&
     abrangencia === 'estado' &&
     !estado
   ) {
@@ -1120,7 +1795,9 @@ async function _salvarCampanha() {
     return;
   }
 
+
   if (
+    !window._editandoCampanhaId &&
     abrangencia === 'cidade' &&
     (!estado || !cidade)
   ) {
@@ -1129,31 +1806,66 @@ async function _salvarCampanha() {
     return;
   }
 
+
   if (fim < inicio) {
     result.textContent =
       '❌ A data final não pode ser anterior à inicial.';
     return;
   }
 
-  let cidadeEnvio = null;
-  let estadoEnvio = null;
-
-  if (abrangencia === 'estado') {
-    estadoEnvio = estado;
-  }
-
-  if (abrangencia === 'cidade') {
-    estadoEnvio = estado;
-    cidadeEnvio = cidade;
-  }
 
   btn.disabled = true;
   result.textContent = 'Salvando...';
 
+
   try {
-    const data = await _api('/admin/campanhas', {
-      method: 'POST',
-      body: JSON.stringify({
+    let path;
+    let method;
+    let body;
+
+
+    if (window._editandoCampanhaId) {
+      path =
+        `/admin/campanhas/${window._editandoCampanhaId}`;
+
+      method =
+        'PUT';
+
+      body = {
+        titulo,
+        promocao,
+        descricao: descricao || null,
+        inicio,
+        fim
+      };
+
+    } else {
+      let cidadeEnvio = null;
+      let estadoEnvio = null;
+
+
+      if (abrangencia === 'estado') {
+        estadoEnvio =
+          estado;
+      }
+
+
+      if (abrangencia === 'cidade') {
+        estadoEnvio =
+          estado;
+
+        cidadeEnvio =
+          cidade;
+      }
+
+
+      path =
+        '/admin/campanhas';
+
+      method =
+        'POST';
+
+      body = {
         titulo,
         promocao,
         descricao: descricao || null,
@@ -1163,31 +1875,121 @@ async function _salvarCampanha() {
         bar_id: null,
         inicio,
         fim
-      })
-    });
+      };
+    }
+
+
+    const data =
+      await _api(path, {
+        method,
+        body: JSON.stringify(body)
+      });
+
 
     if (!data?.ok) {
       result.textContent =
-        `❌ ${data?.erro || 'Erro ao criar campanha'}`;
+        `❌ ${data?.erro || 'Erro ao salvar campanha'}`;
       return;
     }
 
-    result.textContent =
-      '✅ Campanha criada com sucesso.';
+
+    if (window._editandoCampanhaId) {
+      result.textContent =
+        '✅ Campanha atualizada com sucesso.';
+    } else if (data.status === 'pendente') {
+      result.textContent =
+        '✅ Campanha enviada para aprovação.';
+    } else {
+      result.textContent =
+        '✅ Campanha publicada com sucesso.';
+    }
+
 
     await _carregarCampanhas();
+    await _carregarStats();
+
 
     setTimeout(() => {
       _fecharModalCampanha();
-    }, 500);
+    }, 600);
 
   } catch (e) {
     console.error('[Campanha]', e);
+
     result.textContent =
-      '❌ Erro ao criar campanha.';
+      '❌ Erro ao salvar campanha.';
+
   } finally {
     btn.disabled = false;
   }
+}
+async function _aprovarCampanha(id) {
+  const campanha =
+    _campanhasAdmin.find(c => c.id === id);
+
+  if (!campanha) return;
+
+  if (
+    !confirm(
+      `Aprovar e publicar a campanha "${campanha.titulo}"?`
+    )
+  ) {
+    return;
+  }
+
+  const data =
+    await _api(
+      `/admin/campanhas/${id}/aprovar`,
+      {
+        method: 'PUT'
+      }
+    );
+
+  if (!data?.ok) {
+    alert(
+      data?.erro ||
+      'Não foi possível aprovar a campanha.'
+    );
+    return;
+  }
+
+  await _carregarCampanhas();
+  await _carregarStats();
+}
+
+
+async function _excluirCampanha(id) {
+  const campanha =
+    _campanhasAdmin.find(c => c.id === id);
+
+  if (!campanha) return;
+
+  if (
+    !confirm(
+      `Excluir a campanha "${campanha.titulo}"?\n\nEssa ação não poderá ser desfeita.`
+    )
+  ) {
+    return;
+  }
+
+  const data =
+    await _api(
+      `/admin/campanhas/${id}`,
+      {
+        method: 'DELETE'
+      }
+    );
+
+  if (!data?.ok) {
+    alert(
+      data?.erro ||
+      'Não foi possível excluir a campanha.'
+    );
+    return;
+  }
+
+  await _carregarCampanhas();
+  await _carregarStats();
 }
 function _abrirImport() { document.getElementById('modal-import').classList.remove('hidden'); }
 
@@ -1227,7 +2029,10 @@ async function _processarImport(input) {
 
   const data = await _api('/admin/bares/import', { method: 'POST', body: JSON.stringify({ bares }) });
   if (!data?.ok) { result.textContent = `❌ ${data?.erro || 'Erro no import'}`; return; }
-  result.textContent = `✅ ${data.inseridos} bares importados! Vá em "Preview Campanha" para aprovar.`;
+  result.textContent =
+  _cargo() === 'cadastrador'
+    ? `✅ ${data.inseridos} bares importados e enviados para aprovação.`
+    : `✅ ${data.inseridos} bares importados e publicados.`;
   if (data.erros?.length) result.textContent += `\n⚠️ ${data.erros.length} erro(s): ${data.erros.slice(0,3).join('; ')}`;
   _carregarBares();
 }
@@ -1263,12 +2068,16 @@ async function _carregarAdmins() {
       </td>
 
       <td>
-        ${
-          a.role === 'viewer'
-            ? 'Visualização'
-            : 'Administrador'
-        }
-      </td>
+  <span class="badge ${
+    a.role === 'gestor'
+      ? 'badge-ok'
+      : a.role === 'publicador'
+        ? 'badge-pend'
+        : 'badge-off'
+  }">
+    ${_esc(_labelCargo(a.role))}
+  </span>
+</td>
 
       <td>
         ${
@@ -1336,7 +2145,36 @@ async function _criarAdmin() {
     role:
       document.getElementById('adm-role').value
   };
+if (
+  !body.nome ||
+  !body.email ||
+  !body.senha ||
+  !body.estado ||
+  !body.role
+) {
+  result.textContent =
+    '❌ Preencha todos os campos obrigatórios.';
+  return;
+}
 
+if (body.senha.length < 12) {
+  result.textContent =
+    '❌ A senha precisa ter pelo menos 12 caracteres.';
+  return;
+}
+
+if (
+  ![
+    'gestor',
+    'publicador',
+    'cadastrador',
+    'consulta'
+  ].includes(body.role)
+) {
+  result.textContent =
+    '❌ Perfil inválido.';
+  return;
+}
   const data = await _api('/admin/admins', {
     method: 'POST',
     body: JSON.stringify(body)

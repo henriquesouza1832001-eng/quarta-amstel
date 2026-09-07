@@ -219,7 +219,11 @@ async function verifyJWT(token, secret) {
   }
 }
 
-async function requireAuth(request, env, roles = ['master', 'admin', 'viewer']) {
+async function requireAuth(
+  request,
+  env,
+  roles = ['master', 'gestor', 'publicador', 'cadastrador', 'consulta']
+) {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) return null;
   const token = authHeader.slice(7);
@@ -231,12 +235,52 @@ async function requireAuth(request, env, roles = ['master', 'admin', 'viewer']) 
 function temPermissao(admin, permissao) {
   return Number(admin?.[permissao] || 0) === 1;
 }
+
+function cargoNormalizado(admin) {
+  const role = String(admin?.role || '').trim().toLowerCase();
+  return role;
+}
+
+function podeCriarConteudo(admin) {
+  return ['master', 'gestor', 'publicador', 'cadastrador']
+    .includes(cargoNormalizado(admin));
+}
+
+function podePublicarConteudo(admin) {
+  return ['master', 'gestor', 'publicador']
+    .includes(cargoNormalizado(admin));
+}
+
+function podeAprovarConteudo(admin) {
+  return ['master', 'gestor', 'publicador']
+    .includes(cargoNormalizado(admin));
+}
+
+function podeEditarPublicado(admin) {
+  return ['master', 'gestor', 'publicador']
+    .includes(cargoNormalizado(admin));
+}
+
+function podeExcluirConteudo(admin) {
+  return ['master', 'gestor']
+    .includes(cargoNormalizado(admin));
+}
+
+function podeGerenciarAdminsPorCargo(admin) {
+  return ['master', 'gestor']
+    .includes(cargoNormalizado(admin));
+}
+
 function adminPodeGerenciarLocal(admin, cidade, estado) {
   if (!admin) return false;
 
-  if (admin.role === 'master') {
-    return true;
-  }
+  if (cargoNormalizado(admin) === 'master') {
+  return true;
+}
+
+if (Number(admin.can_manage_all_regions || 0) === 1) {
+  return true;
+}
 
   const cidadeBar = String(cidade || '').trim().toLowerCase();
   const estadoBar = String(estado || '').trim().toUpperCase();
@@ -423,18 +467,76 @@ router.get('/bares', async (request, env) => {
     .sort((a, b) => a.distancia_km - b.distancia_km);
 
   const hoje = new Date().toISOString().split('T')[0];
-  const { results: campanhas } = await db.prepare(`
-    SELECT bar_id, titulo, promocao FROM campanhas 
-    WHERE ativo = 1 AND inicio <= ? AND fim >= ?
-  `).bind(hoje, hoje).all();
 
-  const campanhaMap = {};
-  campanhas.forEach(c => { campanhaMap[c.bar_id] = c; });
+const { results: campanhas } = await db.prepare(`
+  SELECT
+    id,
+    titulo,
+    promocao,
+    descricao,
+    cidade,
+    estado,
+    bar_id,
+    inicio,
+    fim,
+    ativo,
+    criado_em
+  FROM campanhas
+  WHERE ativo = 1
+    AND status = 'publicada'
+    AND inicio <= ?
+    AND fim >= ?
+  ORDER BY criado_em DESC
+`).bind(hoje, hoje).all();
 
-  bares = bares.map(b => ({
-    ...b,
-    campanha_ativa: campanhaMap[b.id] || null,
-  }));
+function escolherCampanhaParaBar(bar) {
+  const especificaBar = campanhas.find(c =>
+    c.bar_id === bar.id
+  );
+
+  if (especificaBar) {
+    return especificaBar;
+  }
+
+  const porCidade = campanhas.find(c =>
+    !c.bar_id &&
+    c.cidade &&
+    c.estado &&
+    String(c.cidade).trim().toLowerCase() ===
+      String(bar.cidade || '').trim().toLowerCase() &&
+    String(c.estado).trim().toUpperCase() ===
+      String(bar.estado || '').trim().toUpperCase()
+  );
+
+  if (porCidade) {
+    return porCidade;
+  }
+
+  const porEstado = campanhas.find(c =>
+    !c.bar_id &&
+    !c.cidade &&
+    c.estado &&
+    String(c.estado).trim().toUpperCase() ===
+      String(bar.estado || '').trim().toUpperCase()
+  );
+
+  if (porEstado) {
+    return porEstado;
+  }
+
+  const nacional = campanhas.find(c =>
+    !c.bar_id &&
+    !c.cidade &&
+    !c.estado
+  );
+
+  return nacional || null;
+}
+
+bares = bares.map(b => ({
+  ...b,
+  campanha_ativa: escolherCampanhaParaBar(b)
+}));
 
   return json({ ok: true, total: bares.length, bares });
 });
@@ -449,10 +551,57 @@ router.get('/bares/:id', async (request, env) => {
   if (!bar) return err('Bar não encontrado', 404);
 
   const hoje = new Date().toISOString().split('T')[0];
-  const campanha = await db.prepare(`
-    SELECT titulo, promocao, descricao FROM campanhas
-    WHERE bar_id = ? AND ativo = 1 AND inicio <= ? AND fim >= ?
-  `).bind(id, hoje, hoje).first();
+const { results: campanhas } = await db.prepare(`
+  SELECT
+    id,
+    titulo,
+    promocao,
+    descricao,
+    cidade,
+    estado,
+    bar_id,
+    inicio,
+    fim,
+    ativo,
+    criado_em
+  FROM campanhas
+  WHERE ativo = 1
+    AND status = 'publicada'
+    AND inicio <= ?
+    AND fim >= ?
+  ORDER BY criado_em DESC
+`).bind(hoje, hoje).all();
+
+const campanha =
+  campanhas.find(c =>
+    c.bar_id === bar.id
+  ) ||
+
+  campanhas.find(c =>
+    !c.bar_id &&
+    c.cidade &&
+    c.estado &&
+    String(c.cidade).trim().toLowerCase() ===
+      String(bar.cidade || '').trim().toLowerCase() &&
+    String(c.estado).trim().toUpperCase() ===
+      String(bar.estado || '').trim().toUpperCase()
+  ) ||
+
+  campanhas.find(c =>
+    !c.bar_id &&
+    !c.cidade &&
+    c.estado &&
+    String(c.estado).trim().toUpperCase() ===
+      String(bar.estado || '').trim().toUpperCase()
+  ) ||
+
+  campanhas.find(c =>
+    !c.bar_id &&
+    !c.cidade &&
+    !c.estado
+  ) ||
+
+  null;
 
   return json({ ok: true, bar: { ...bar, campanha_ativa: campanha || null } });
 });
@@ -573,7 +722,7 @@ return json({
 });
 
 router.post('/admin/totp/setup', async (request, env) => {
-  const admin = await requireAuth(request, env, ['master', 'admin']);
+  const admin = await requireAuth(request, env);
   if (!admin) return err('Não autorizado', 401);
 
   const secret = generateTOTPSecret();
@@ -585,7 +734,7 @@ router.post('/admin/totp/setup', async (request, env) => {
 });
 
 router.post('/admin/totp/confirm', async (request, env) => {
-  const adminAuth = await requireAuth(request, env, ['master', 'admin']);
+  const adminAuth = await requireAuth(request, env);
   if (!adminAuth) return err('Não autorizado', 401);
 
   let body;
@@ -608,9 +757,12 @@ router.get('/admin/admins', async (request, env) => {
     return err('Não autorizado', 401);
   }
 
-  if (!temPermissao(admin, 'can_manage_admins')) {
-    return err('Sem permissão para gerenciar administradores', 403);
-  }
+ if (
+  !temPermissao(admin, 'can_manage_admins') ||
+  !podeGerenciarAdminsPorCargo(admin)
+) {
+  return err('Sem permissão para gerenciar administradores', 403);
+}
 
   const db = env.DB;
 
@@ -644,9 +796,12 @@ router.post('/admin/admins', async (request, env) => {
     return err('Não autorizado', 401);
   }
 
-  if (!temPermissao(admin, 'can_manage_admins')) {
-    return err('Sem permissão para criar administradores', 403);
-  }
+  if (
+  !temPermissao(admin, 'can_manage_admins') ||
+  !podeGerenciarAdminsPorCargo(admin)
+) {
+  return err('Sem permissão para criar administradores', 403);
+}
 
   let body;
 
@@ -672,12 +827,12 @@ router.post('/admin/admins', async (request, env) => {
     );
   }
 
-  if (!['admin', 'viewer'].includes(role)) {
-    return err(
-      'O painel Amstel não pode criar usuários Master.',
-      403
-    );
-  }
+ if (!['gestor', 'publicador', 'cadastrador', 'consulta'].includes(role)) {
+  return err(
+    'Cargo inválido. Contas Master só podem ser provisionadas pelo MGL.',
+    403
+  );
+}
 
   if (String(senha).length < 12) {
     return err(
@@ -766,9 +921,12 @@ router.put('/admin/admins/:id/status', async (request, env) => {
     return err('Não autorizado', 401);
   }
 
-  if (!temPermissao(admin, 'can_manage_admins')) {
-    return err('Sem permissão', 403);
-  }
+  if (
+  !temPermissao(admin, 'can_manage_admins') ||
+  !podeGerenciarAdminsPorCargo(admin)
+) {
+  return err('Sem permissão', 403);
+}
 
   const { id } = request.params;
 
@@ -850,16 +1008,38 @@ router.get('/admin/bares', async (request, env) => {
 });
 
 router.post('/admin/bares', async (request, env) => {
-  const admin = await requireAuth(request, env, ['master', 'admin']);
+  const admin = await requireAuth(request, env);
   if (!admin) return err('Não autorizado', 401);
 
-  let body;
-  try { body = await request.json(); } catch { return err('JSON inválido'); }
+  if (!podeCriarConteudo(admin)) {
+    return err('Seu perfil possui acesso somente para consulta.', 403);
+  }
 
-  const { nome, endereco, bairro, cidade, estado, lat, lng, telefone, horario, descricao, foto_url } = body;
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return err('JSON inválido');
+  }
+
+  const {
+    nome,
+    endereco,
+    bairro,
+    cidade,
+    estado,
+    lat,
+    lng,
+    telefone,
+    horario,
+    descricao,
+    foto_url
+  } = body;
 
   if (!nome || !endereco || !bairro || !cidade || !estado || !lat || !lng) {
-    return err('Campos obrigatórios: nome, endereco, bairro, cidade, estado, lat, lng');
+    return err(
+      'Campos obrigatórios: nome, endereco, bairro, cidade, estado, lat, lng'
+    );
   }
 
   if (hasSQLInjection(nome) || hasSQLInjection(endereco)) {
@@ -874,24 +1054,78 @@ router.post('/admin/bares', async (request, env) => {
   }
 
   if (!adminPodeGerenciarLocal(admin, cidadeNormalizada, estadoNormalizado)) {
-    return err('Você não possui permissão para cadastrar bares nesta região.', 403);
+    return err(
+      'Você não possui permissão para cadastrar bares nesta região.',
+      403
+    );
   }
 
-  const db = env.DB;
-  const result = await db.prepare(`
-    INSERT INTO bares (nome, endereco, bairro, cidade, estado, lat, lng, telefone, horario, descricao, foto_url, aprovado)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(nome, endereco, bairro, cidadeNormalizada, estadoNormalizado, lat, lng, telefone || null, horario || null, descricao || null, foto_url || null, admin.role === 'master' ? 1 : 0).run();
+  const publicaAutomaticamente = podePublicarConteudo(admin);
+  const aprovado = publicaAutomaticamente ? 1 : 0;
 
-  return json({ ok: true, id: result.meta?.last_row_id }, 201);
+  const db = env.DB;
+
+  const result = await db.prepare(`
+    INSERT INTO bares (
+      nome,
+      endereco,
+      bairro,
+      cidade,
+      estado,
+      lat,
+      lng,
+      telefone,
+      horario,
+      descricao,
+      foto_url,
+      aprovado,
+      criado_por,
+      aprovado_por,
+      aprovado_em
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    String(nome).trim(),
+    String(endereco).trim(),
+    String(bairro).trim(),
+    cidadeNormalizada,
+    estadoNormalizado,
+    lat,
+    lng,
+    telefone || null,
+    horario || null,
+    descricao || null,
+    foto_url || null,
+    aprovado,
+    admin.id,
+    publicaAutomaticamente ? admin.id : null,
+    publicaAutomaticamente ? new Date().toISOString() : null
+  ).run();
+
+  return json({
+    ok: true,
+    id: result.meta?.last_row_id,
+    aprovado,
+    status: aprovado ? 'publicado' : 'pendente',
+    mensagem: aprovado
+      ? 'Bar cadastrado e publicado.'
+      : 'Bar cadastrado e enviado para aprovação.'
+  }, 201);
 });
 
 router.put('/admin/bares/:id/aprovar', async (request, env) => {
-  const admin = await requireAuth(request, env, ['master', 'admin']);
+  const admin = await requireAuth(request, env);
   if (!admin) return err('Não autorizado', 401);
 
+  if (!podeAprovarConteudo(admin)) {
+    return err('Seu perfil não possui permissão para aprovar bares.', 403);
+  }
+
   const { id } = request.params;
-  if (!/^[a-f0-9]{16}$/.test(id)) return err('ID inválido', 400);
+
+  if (!/^[a-f0-9]{16}$/.test(id)) {
+    return err('ID inválido', 400);
+  }
 
   const db = env.DB;
 
@@ -906,22 +1140,91 @@ router.put('/admin/bares/:id/aprovar', async (request, env) => {
   }
 
   if (!adminPodeGerenciarLocal(admin, bar.cidade, bar.estado)) {
-    return err('Você não possui permissão para aprovar este bar.', 403);
+    return err(
+      'Você não possui permissão para aprovar este bar.',
+      403
+    );
   }
 
   await db.prepare(`
     UPDATE bares
-    SET aprovado = 1,
-        atualizado_em = datetime('now')
+    SET
+      aprovado = 1,
+      aprovado_por = ?,
+      aprovado_em = datetime('now'),
+      atualizado_em = datetime('now')
+    WHERE id = ?
+  `).bind(admin.id, id).run();
+
+  return json({
+    ok: true,
+    mensagem: 'Bar aprovado e publicado.'
+  });
+});
+router.delete('/admin/bares/:id', async (request, env) => {
+  const admin = await requireAuth(request, env);
+  if (!admin) return err('Não autorizado', 401);
+
+  if (!podeExcluirConteudo(admin)) {
+    return err('Seu perfil não possui permissão para excluir bares.', 403);
+  }
+
+  const { id } = request.params;
+
+  if (!/^[a-f0-9]{16}$/.test(id)) {
+    return err('ID inválido', 400);
+  }
+
+  const db = env.DB;
+
+  const bar = await db.prepare(`
+    SELECT id, nome, cidade, estado
+    FROM bares
+    WHERE id = ?
+  `).bind(id).first();
+
+  if (!bar) {
+    return err('Bar não encontrado', 404);
+  }
+
+  if (!adminPodeGerenciarLocal(admin, bar.cidade, bar.estado)) {
+    return err(
+      'Você não possui permissão para excluir este bar.',
+      403
+    );
+  }
+
+  const campanhaLigada = await db.prepare(`
+    SELECT id
+    FROM campanhas
+    WHERE bar_id = ?
+    LIMIT 1
+  `).bind(id).first();
+
+  if (campanhaLigada) {
+    return err(
+      'Este bar possui campanha vinculada. Remova ou altere a campanha antes de excluir.',
+      409
+    );
+  }
+
+  await db.prepare(`
+    DELETE FROM bares
     WHERE id = ?
   `).bind(id).run();
 
-  return json({ ok: true });
+  return json({
+    ok: true,
+    mensagem: 'Bar excluído com sucesso.'
+  });
 });
-
 router.put('/admin/bares/:id', async (request, env) => {
-  const admin = await requireAuth(request, env, ['master', 'admin']);
-  if (!admin) return err('Não autorizado', 401);
+  const admin = await requireAuth(request, env);
+if (!admin) return err('Não autorizado', 401);
+
+if (!podeCriarConteudo(admin)) {
+  return err('Seu perfil possui acesso somente para consulta.', 403);
+}
 
   const { id } = request.params;
   if (!/^[a-f0-9]{16}$/.test(id)) return err('ID inválido', 400);
@@ -936,14 +1239,26 @@ router.put('/admin/bares/:id', async (request, env) => {
   const db = env.DB;
 
   const barAtual = await db.prepare(`
-    SELECT id, cidade, estado
-    FROM bares
+    SELECT id, cidade, estado, aprovado, criado_por
+FROM bares
     WHERE id = ?
   `).bind(id).first();
 
   if (!barAtual) {
     return err('Bar não encontrado', 404);
   }
+  if (
+  cargoNormalizado(admin) === 'cadastrador' &&
+  (
+    Number(barAtual.aprovado) === 1 ||
+    barAtual.criado_por !== admin.id
+  )
+) {
+  return err(
+    'Cadastradores só podem alterar conteúdos pendentes criados por eles.',
+    403
+  );
+}
 
   if (!adminPodeGerenciarLocal(admin, barAtual.cidade, barAtual.estado)) {
     return err('Você não possui permissão para editar este bar.', 403);
@@ -990,8 +1305,12 @@ router.put('/admin/bares/:id', async (request, env) => {
 });
 
 router.post('/admin/bares/import', async (request, env) => {
-  const admin = await requireAuth(request, env, ['master', 'admin']);
-  if (!admin) return err('Não autorizado', 401);
+  const admin = await requireAuth(request, env);
+if (!admin) return err('Não autorizado', 401);
+
+if (!podeCriarConteudo(admin)) {
+  return err('Seu perfil não pode importar bares.', 403);
+}
 
   let body;
   try { body = await request.json(); } catch { return err('JSON inválido'); }
@@ -1023,8 +1342,8 @@ router.post('/admin/bares/import', async (request, env) => {
       b.estado = estadoImport;
       await db.prepare(`
         INSERT INTO bares (nome, endereco, bairro, cidade, estado, lat, lng, telefone, horario, descricao, aprovado)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-      `).bind(b.nome, b.endereco || '', b.bairro || '', b.cidade, b.estado.toUpperCase(), b.lat, b.lng, b.telefone || null, b.horario || null, b.descricao || null).run();
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(b.nome, b.endereco || '', b.bairro || '', b.cidade, b.estado.toUpperCase(), b.lat, b.lng, b.telefone || null, b.horario || null, b.descricao || null,podePublicarConteudo(admin)? 1 : 0).run();
       inseridos++;
     } catch (e) {
       erros.push(`Erro ao inserir "${b.nome}": ${e.message}`);
@@ -1101,27 +1420,424 @@ router.get('/admin/campanhas', async (request, env) => {
 
 
 router.post('/admin/campanhas', async (request, env) => {
-  const admin = await requireAuth(request, env, ['master', 'admin']);
+  const admin = await requireAuth(request, env);
   if (!admin) return err('Não autorizado', 401);
 
-  let body;
-  try { body = await request.json(); } catch { return err('JSON inválido'); }
+  if (!podeCriarConteudo(admin)) {
+    return err('Seu perfil possui acesso somente para consulta.', 403);
+  }
+router.put('/admin/campanhas/:id/aprovar', async (request, env) => {
+  const admin = await requireAuth(request, env);
+  if (!admin) return err('Não autorizado', 401);
 
-  const { titulo, descricao, promocao, cidade, estado, bar_id, inicio, fim } = body;
-  if (!titulo || !promocao || !inicio || !fim) return err('Campos obrigatórios: titulo, promocao, inicio, fim');
+  if (!podeAprovarConteudo(admin)) {
+    return err(
+      'Seu perfil não possui permissão para aprovar campanhas.',
+      403
+    );
+  }
+
+  const { id } = request.params;
+
+  if (!/^[a-f0-9]{16}$/.test(id)) {
+    return err('ID inválido', 400);
+  }
 
   const db = env.DB;
-  await db.prepare(`
-    INSERT INTO campanhas (titulo, descricao, promocao, cidade, estado, bar_id, inicio, fim, criado_por)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(titulo, descricao || null, promocao, cidade || null, estado || null, bar_id || null, inicio, fim, admin.id).run();
 
-  return json({ ok: true }, 201);
+  const campanha = await db.prepare(`
+    SELECT *
+    FROM campanhas
+    WHERE id = ?
+  `).bind(id).first();
+
+  if (!campanha) {
+    return err('Campanha não encontrada', 404);
+  }
+
+  if (campanha.bar_id) {
+    const bar = await db.prepare(`
+      SELECT cidade, estado
+      FROM bares
+      WHERE id = ?
+    `).bind(campanha.bar_id).first();
+
+    if (
+      !bar ||
+      !adminPodeGerenciarLocal(admin, bar.cidade, bar.estado)
+    ) {
+      return err(
+        'Você não pode aprovar esta campanha.',
+        403
+      );
+    }
+  } else if (campanha.cidade || campanha.estado) {
+    if (
+      !adminPodeGerenciarLocal(
+        admin,
+        campanha.cidade || '',
+        campanha.estado || ''
+      )
+    ) {
+      return err(
+        'Você não pode aprovar esta campanha.',
+        403
+      );
+    }
+  } else if (
+    Number(admin.can_manage_all_regions || 0) !== 1
+  ) {
+    return err(
+      'Você não pode aprovar campanha nacional.',
+      403
+    );
+  }
+
+  await db.prepare(`
+    UPDATE campanhas
+    SET
+      status = 'publicada',
+      ativo = 1,
+      aprovado_por = ?,
+      aprovado_em = datetime('now')
+    WHERE id = ?
+  `).bind(admin.id, id).run();
+
+  return json({
+    ok: true,
+    mensagem: 'Campanha aprovada e publicada.'
+  });
+});
+router.put('/admin/campanhas/:id', async (request, env) => {
+  const admin = await requireAuth(request, env);
+  if (!admin) return err('Não autorizado', 401);
+
+  if (!podeCriarConteudo(admin)) {
+    return err('Seu perfil possui acesso somente para consulta.', 403);
+  }
+
+  const { id } = request.params;
+
+  if (!/^[a-f0-9]{16}$/.test(id)) {
+    return err('ID inválido', 400);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return err('JSON inválido', 400);
+  }
+
+  const db = env.DB;
+
+  const campanha = await db.prepare(`
+    SELECT *
+    FROM campanhas
+    WHERE id = ?
+  `).bind(id).first();
+
+  if (!campanha) {
+    return err('Campanha não encontrada', 404);
+  }
+
+  if (
+    cargoNormalizado(admin) === 'cadastrador' &&
+    (
+      campanha.status !== 'pendente' ||
+      campanha.criado_por !== admin.id
+    )
+  ) {
+    return err(
+      'Cadastradores só podem editar campanhas pendentes criadas por eles.',
+      403
+    );
+  }
+
+  if (
+    campanha.status === 'publicada' &&
+    !podeEditarPublicado(admin)
+  ) {
+    return err(
+      'Seu perfil não pode alterar campanha publicada.',
+      403
+    );
+  }
+
+  const campos = [
+    'titulo',
+    'descricao',
+    'promocao',
+    'inicio',
+    'fim'
+  ];
+
+  const updates = [];
+  const params = [];
+
+  for (const campo of campos) {
+    if (body[campo] !== undefined) {
+      updates.push(`${campo} = ?`);
+      params.push(body[campo]);
+    }
+  }
+
+  if (!updates.length) {
+    return err('Nenhum campo para atualizar.');
+  }
+
+  if (
+    body.inicio &&
+    body.fim &&
+    body.fim < body.inicio
+  ) {
+    return err(
+      'A data final não pode ser anterior à inicial.',
+      400
+    );
+  }
+
+  params.push(id);
+
+  await db.prepare(`
+    UPDATE campanhas
+    SET ${updates.join(', ')}
+    WHERE id = ?
+  `).bind(...params).run();
+
+  return json({
+    ok: true,
+    mensagem: 'Campanha atualizada.'
+  });
+});
+router.delete('/admin/campanhas/:id', async (request, env) => {
+  const admin = await requireAuth(request, env);
+  if (!admin) return err('Não autorizado', 401);
+
+  if (!podeExcluirConteudo(admin)) {
+    return err(
+      'Seu perfil não possui permissão para excluir campanhas.',
+      403
+    );
+  }
+
+  const { id } = request.params;
+
+  if (!/^[a-f0-9]{16}$/.test(id)) {
+    return err('ID inválido', 400);
+  }
+
+  const db = env.DB;
+
+  const campanha = await db.prepare(`
+    SELECT *
+    FROM campanhas
+    WHERE id = ?
+  `).bind(id).first();
+
+  if (!campanha) {
+    return err('Campanha não encontrada', 404);
+  }
+
+  if (campanha.bar_id) {
+    const bar = await db.prepare(`
+      SELECT cidade, estado
+      FROM bares
+      WHERE id = ?
+    `).bind(campanha.bar_id).first();
+
+    if (
+      !bar ||
+      !adminPodeGerenciarLocal(admin, bar.cidade, bar.estado)
+    ) {
+      return err(
+        'Você não pode excluir esta campanha.',
+        403
+      );
+    }
+  } else if (campanha.cidade || campanha.estado) {
+    if (
+      !adminPodeGerenciarLocal(
+        admin,
+        campanha.cidade || '',
+        campanha.estado || ''
+      )
+    ) {
+      return err(
+        'Você não pode excluir esta campanha.',
+        403
+      );
+    }
+  } else if (
+    Number(admin.can_manage_all_regions || 0) !== 1
+  ) {
+    return err(
+      'Você não pode excluir campanha nacional.',
+      403
+    );
+  }
+
+  await db.prepare(`
+    DELETE FROM campanhas
+    WHERE id = ?
+  `).bind(id).run();
+
+  return json({
+    ok: true,
+    mensagem: 'Campanha excluída.'
+  });
+});
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return err('JSON inválido');
+  }
+
+  const {
+    titulo,
+    descricao,
+    promocao,
+    cidade,
+    estado,
+    bar_id,
+    inicio,
+    fim
+  } = body;
+
+  if (!titulo || !promocao || !inicio || !fim) {
+    return err(
+      'Campos obrigatórios: titulo, promocao, inicio, fim'
+    );
+  }
+
+  if (fim < inicio) {
+    return err(
+      'A data final não pode ser anterior à data inicial.',
+      400
+    );
+  }
+
+  const cidadeNormalizada =
+    cidade ? String(cidade).trim() : null;
+
+  const estadoNormalizado =
+    estado ? String(estado).trim().toUpperCase() : null;
+
+  const db = env.DB;
+
+  if (bar_id) {
+    const bar = await db.prepare(`
+      SELECT id, cidade, estado
+      FROM bares
+      WHERE id = ?
+    `).bind(bar_id).first();
+
+    if (!bar) {
+      return err('Bar não encontrado', 404);
+    }
+
+    if (!adminPodeGerenciarLocal(admin, bar.cidade, bar.estado)) {
+      return err(
+        'Você não pode criar campanha para este bar.',
+        403
+      );
+    }
+  } else if (cidadeNormalizada || estadoNormalizado) {
+    if (
+      !adminPodeGerenciarLocal(
+        admin,
+        cidadeNormalizada || '',
+        estadoNormalizado || ''
+      )
+    ) {
+      return err(
+        'Você não pode criar campanha para esta região.',
+        403
+      );
+    }
+  } else {
+    if (Number(admin.can_manage_all_regions || 0) !== 1) {
+      return err(
+        'Somente usuários com acesso nacional podem criar campanha para todos os bares.',
+        403
+      );
+    }
+  }
+
+  const publicaAutomaticamente = podePublicarConteudo(admin);
+
+  const status =
+    publicaAutomaticamente
+      ? 'publicada'
+      : 'pendente';
+
+  const ativo =
+    publicaAutomaticamente
+      ? 1
+      : 0;
+
+  const id = Array.from(
+    crypto.getRandomValues(new Uint8Array(8))
+  ).map(
+    b => b.toString(16).padStart(2, '0')
+  ).join('');
+
+  await db.prepare(`
+    INSERT INTO campanhas (
+      id,
+      titulo,
+      descricao,
+      promocao,
+      cidade,
+      estado,
+      bar_id,
+      inicio,
+      fim,
+      ativo,
+      status,
+      criado_por,
+      aprovado_por,
+      aprovado_em
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    id,
+    String(titulo).trim(),
+    descricao || null,
+    String(promocao).trim(),
+    cidadeNormalizada,
+    estadoNormalizado,
+    bar_id || null,
+    inicio,
+    fim,
+    ativo,
+    status,
+    admin.id,
+    publicaAutomaticamente ? admin.id : null,
+    publicaAutomaticamente ? new Date().toISOString() : null
+  ).run();
+
+  return json({
+    ok: true,
+    id,
+    status,
+    mensagem: publicaAutomaticamente
+      ? 'Campanha publicada.'
+      : 'Campanha enviada para aprovação.'
+  }, 201);
 });
 
 router.post('/admin/push/send', async (request, env) => {
-  const admin = await requireAuth(request, env, ['master', 'admin']);
-  if (!admin) return err('Não autorizado', 401);
+  const admin = await requireAuth(request, env);
+if (!admin) return err('Não autorizado', 401);
+
+if (!podePublicarConteudo(admin)) {
+  return err(
+    'Seu perfil não possui permissão para enviar notificações.',
+    403
+  );
+}
 
   let body;
   try { body = await request.json(); } catch { return err('JSON inválido'); }
