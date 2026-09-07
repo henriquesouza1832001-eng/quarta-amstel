@@ -207,11 +207,11 @@ window._abrirSeletorRota = function (lat, lng, nome) {
 
   const iconApple = `<svg viewBox="0 0 48 48" width="28" height="28"><rect width="48" height="48" rx="10" fill="#fff"/><path d="M24 6C14.06 6 6 14.06 6 24s8.06 18 18 18 18-8.06 18-18S33.94 6 24 6zm0 2c8.84 0 16 7.16 16 16S32.84 40 24 40 8 32.84 8 24 15.16 8 24 8zm-1 5v12.17l-4.59-4.58-1.41 1.41L24 28.83l7-7-1.41-1.41L25 24.17V13h-2z" fill="#1C8EF9"/><path d="M24 14l-7 7 1.41 1.41L23 17.83V30h2V17.83l4.59 4.58L31 21l-7-7z" fill="#34A853"/></svg>`;
 
-  const iconGMaps = `<img src="https://maps.gstatic.com/mapfiles/maps_lite/images/1x/ic_mapsgo_icon_96dp.png" width="28" height="28" style="border-radius:6px" onerror="this.outerHTML='📍'">`;
+  const iconGMaps = `<img src="/assets/icons/google-maps.png" width="28" height="28" style="border-radius:6px">`;
 
-  const iconWaze = `<img src="https://www.waze.com/favicon.ico" width="28" height="28" style="border-radius:6px" onerror="this.outerHTML='🚗'">`;
+  const iconWaze = `<img src="/assets/icons/waze.png" width="28" height="28" style="border-radius:6px">`;
 
-  const iconAppleMaps = `<svg viewBox="0 0 28 28" width="28" height="28"><rect width="28" height="28" rx="6" fill="#fff"/><path d="M14 3C8.477 3 4 7.477 4 13s4.477 10 10 10 10-4.477 10-10S19.523 3 14 3zm0 1.5c4.687 0 8.5 3.813 8.5 8.5s-3.813 8.5-8.5 8.5S5.5 17.687 5.5 13 9.313 4.5 14 4.5zm-.75 3v6.19l-3.47 3.47 1.06 1.06L15 14.06V7.5h-1.75z" fill="#1C8EF9"/></svg>`;
+  const iconAppleMaps = `<img src="/assets/icons/apple-maps.png" width="28" height="28" style="border-radius:6px">`;
 
   const opcoes = isIOS ? [
     { label: 'Apple Maps', icon: iconAppleMaps, deep: appleUrl, web: appleUrl },
