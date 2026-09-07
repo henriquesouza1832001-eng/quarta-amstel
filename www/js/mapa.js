@@ -190,9 +190,10 @@ window._renderMarcadoresMapa = function(bares) { _renderMarcadores(bares); };
 function _renderMarcadores(bares) {
   _marcadores.forEach(m => _mapa.removeLayer(m));
   _marcadores = [];
+  _barSelecionado = null;
 
   const card = document.getElementById('card-proximo');
-  if (card && !bares.length) card.classList.add('hidden');
+  if (card) card.classList.add('hidden');
 
   bares = bares.filter(b => b.lat != null && b.lng != null && !isNaN(b.lat) && !isNaN(b.lng));
 
@@ -238,8 +239,6 @@ function _renderMarcadores(bares) {
 
     marker.addTo(_mapa);
     _marcadores.push(marker);
-
-    if (isSel) _mostrarCardBar(bar);
   });
   const temGPS = window._locationState?.status === 'ready' && window._locationState?.coords;
   if (temGPS && bares.length > 0 && _mapa && _marcadores.length > 0) {
