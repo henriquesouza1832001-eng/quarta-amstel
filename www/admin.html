@@ -2306,7 +2306,46 @@ async function _confirmarTotp() {
   document.getElementById('modal-totp').classList.add('hidden');
   alert('2FA ativado com sucesso! Use o Google Authenticator no próximo login.');
 }
+async function testePermissao(nome, path, method = 'GET', body = null) {
+  try {
+    const r = await fetch(`${WORKER}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: body ? JSON.stringify(body) : undefined
+    });
 
+    let data = null;
+
+    try {
+      data = await r.json();
+    } catch {}
+
+    console.log(
+      `${r.ok ? '✅' : '❌'} ${nome} | HTTP ${r.status}`,
+      data
+    );
+
+    return {
+      nome,
+      status: r.status,
+      ok: r.ok,
+      data
+    };
+
+  } catch (e) {
+    console.error(`💥 ${nome}`, e);
+
+    return {
+      nome,
+      status: 0,
+      ok: false,
+      erro: e.message
+    };
+  }
+}
 </script>
 </body>
 </html>
