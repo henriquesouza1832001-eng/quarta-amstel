@@ -159,17 +159,24 @@ window._buscarMapa = function (query) {
 
   const termo = (query || '').trim().toLowerCase();
 
-  const bares = (window._bares || []).filter(bar => {
-    if (!termo) return true;
+let bares = (window._bares || []).filter(bar => {
+  if (!termo) return true;
 
-    return (
-      String(bar.nome || '').toLowerCase().includes(termo) ||
-      String(bar.bairro || '').toLowerCase().includes(termo) ||
-      String(bar.cidade || '').toLowerCase().includes(termo) ||
-      String(bar.endereco || '').toLowerCase().includes(termo)
-    );
-  });
-  _renderMarcadores(bares);
+  return (
+    String(bar.nome || '').toLowerCase().includes(termo) ||
+    String(bar.bairro || '').toLowerCase().includes(termo) ||
+    String(bar.cidade || '').toLowerCase().includes(termo) ||
+    String(bar.endereco || '').toLowerCase().includes(termo)
+  );
+});
+
+if (_filtroMapaAtivo === 'abertos') {
+  bares = bares.filter(bar =>
+    window._barAbertoAgora?.(bar) === true
+  );
+}
+
+_renderMarcadores(bares);
 };
 
 window._limparBuscaMapa = function () {

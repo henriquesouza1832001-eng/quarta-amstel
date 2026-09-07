@@ -2732,3 +2732,9 @@ min-height: 92px;
 
   flex-shrink: 0;
 }
+/* Status fechado */
+.bar-card__status--fechado,
+.prox-status--fechado,
+.bar-detail__info-item--fechado {
+  color: #C8102E !important;
+}
