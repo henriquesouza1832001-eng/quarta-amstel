@@ -142,7 +142,6 @@ window._filtrarMapa = function (filtro) {
 
   let bares = window._bares || [];
   if (filtro === 'abertos') bares = bares.filter(b => b.horario);
-  if (filtro === 'promocao') bares = bares.filter(b => b.campanha_ativa);
   _renderMarcadores(bares);
 };
 
