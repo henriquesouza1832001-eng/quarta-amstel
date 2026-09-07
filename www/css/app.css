@@ -338,8 +338,8 @@ html, body {
 
 
 .header__logo-img {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   object-fit: contain;
 }
 
@@ -455,7 +455,7 @@ html, body {
 
 /* ── LISTA — HEADER ── */
 .descobrir-header {
-  padding: clamp(16px, 4vw, 28px) var(--page-padding-mobile) 8px;
+  padding: clamp(20px, 5vw, 32px) 20px 12px;
   background: var(--surface);
 }
 
@@ -503,18 +503,18 @@ html, body {
 
 .page-title {
   font-family: var(--font-brand);
-  font-size: clamp(28px, 7vw, 42px);
+  font-size: clamp(30px, 8vw, 44px);
   font-weight: 900;
-  line-height: .95;
+  line-height: 1;
   text-wrap: balance;
   color: var(--text-primary);
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
 }
 
 .page-subtitle {
-  font-size: clamp(13px, 3.5vw, 16px);
-  color: var(--text-secondary);
-  margin-top: 6px;
+  font-size: clamp(13px, 3.5vw, 15px);
+  color: #666666;
+  margin-top: 8px;
   line-height: 1.5;
   text-wrap: balance;
   max-width: 60ch;
@@ -559,7 +559,7 @@ html, body {
   background: var(--bg-input);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-full);
-  padding: 10px 16px;
+  padding: 12px 18px;
   transition: border-color 0.15s;
 }
 
@@ -580,7 +580,7 @@ html, body {
 .filtros-row {
   display: flex;
   gap: 8px;
-  padding: 10px var(--page-padding-mobile);
+  padding: 10px 20px 12px;
   overflow-x: auto;
   scrollbar-width: none;
   background: var(--surface);
@@ -590,11 +590,11 @@ html, body {
 .filtro-chip {
   display: inline-flex;
   align-items: center;
-  padding: 7px 18px;
+  padding: 8px 20px;
   border-radius: var(--radius-full);
   border: 1.5px solid var(--border);
   background: var(--bg-card);
-  font-size: 0.82rem;
+  font-size: 0.83rem;
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -602,6 +602,7 @@ html, body {
   font-family: var(--font-ui);
   transition: all 0.15s;
   flex-shrink: 0;
+  min-height: 36px;
 }
 
 .filtro-chip.active {
@@ -627,7 +628,8 @@ html, body {
 
 @media (min-width: 768px) {
   .bars-grid {
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     max-width: 900px;
     margin: 0 auto;
     width: 100%;
@@ -646,21 +648,21 @@ html, body {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 16px;
+  padding: 14px 20px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   background: var(--surface);
   transition: background var(--transition-fast);
   -webkit-tap-highlight-color: transparent;
   width: 100%;
-  min-height: 76px;
+  min-height: 88px;
 }
 
 .bar-card:active { background: var(--surface-soft); }
 
 .bar-card__img {
-  width: 80px;
-  height: 80px;
+  width: 88px;
+  height: 88px;
   border-radius: var(--radius-md);
   flex-shrink: 0;
   overflow: hidden;
@@ -709,7 +711,7 @@ html, body {
 
 .bar-card__nome {
   font-family: var(--font-brand);
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
@@ -730,9 +732,9 @@ html, body {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   color: var(--status-open);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .bar-card__status::before {
