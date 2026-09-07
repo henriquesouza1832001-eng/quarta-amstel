@@ -1695,7 +1695,7 @@ html, body {
 }
 
 .rota-opcoes {
-  padding: 8px 0 max(16px, env(safe-area-inset-bottom));
+  padding: 8px 0 16px;
 }
 
 .rota-opcao {
