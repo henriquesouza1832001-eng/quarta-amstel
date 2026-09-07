@@ -2695,3 +2695,16 @@ min-height: 92px;
     padding: 0 8px !important;
   }
 }
+.bar-card__img img.bar-card__img--fallback {
+  object-fit: contain !important;
+  padding: 18px;
+  background: #fffaf3;
+}
+
+.bar-detail__foto-placeholder {
+  background:
+    #fffaf3
+    url('/logos/Logo-256.png')
+    center / 72px auto
+    no-repeat !important;
+}

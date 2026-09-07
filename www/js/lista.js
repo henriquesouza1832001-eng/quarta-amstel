@@ -142,7 +142,7 @@ function _renderCardBar(bar) {
     : '';
 
   const imgHtml = bar.foto_url
-    ? `<img src="${bar.foto_url}" alt="${bar.nome}" loading="lazy" onload="this.classList.add('loaded')" onerror="this.outerHTML='<div class=\\'bar-card__placeholder\\'></div>'">`
+    ? `<img src="${bar.foto_url}" alt="${bar.nome}" loading="lazy" onload="this.classList.add('loaded')" onerror="this.onerror=null;this.src='/logos/Logo-256.png';this.classList.add('bar-card__img--fallback')">`
     : `<div class="bar-card__placeholder"></div>`;
 
   return `
@@ -207,52 +207,51 @@ async function _executarBusca(query) {
   const lista = document.getElementById('lista-bares');
   if (!lista) return;
 
-  if (!query || query.trim().length < 2) {
+  const termo = (query || '').trim().toLowerCase();
+
+  if (termo.length < 2) {
     window._filtrar(_filtroAtivo);
     return;
   }
 
-  const local = (window._baresOriginais || []).filter(b =>
-    b.nome.toLowerCase().includes(query.toLowerCase()) ||
-    b.bairro.toLowerCase().includes(query.toLowerCase())
-  );
+  const bares = (window._baresOriginais || []).filter(bar => {
+    const nome = String(bar.nome || '').toLowerCase();
+    const bairro = String(bar.bairro || '').toLowerCase();
+    const cidade = String(bar.cidade || '').toLowerCase();
+    const endereco = String(bar.endereco || '').toLowerCase();
 
-  if (local.length) {
-    lista.innerHTML = local.map(bar => _renderCardBar(bar)).join('');
-    return;
-  }
+    return (
+      nome.includes(termo) ||
+      bairro.includes(termo) ||
+      cidade.includes(termo) ||
+      endereco.includes(termo)
+    );
+  });
 
-  lista.innerHTML = '<div class="loading"></div>';
-
-  try {
-    const params = new URLSearchParams({ search: query.trim() });
-    if (window._userLat) params.set('lat', window._userLat);
-    if (window._userLng) params.set('lng', window._userLng);
-
-    const resp = await fetch(`${WORKER}/bares?${params}`);
-    const data = await resp.json();
-
-    if (!data.ok || !data.bares?.length) {
-      lista.innerHTML = `<div class="estado-wrap">
+  if (!bares.length) {
+    lista.innerHTML = `
+      <div class="estado-wrap">
         <svg class="estado-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5">
           <circle cx="28" cy="28" r="18" stroke-width="2"/>
           <path d="M40 40l12 12" stroke-width="2.5"/>
-          <path d="M22 28h12M28 22v12" opacity=".3"/>
         </svg>
+
         <p class="estado-titulo">Não encontramos esse bar.</p>
-        <p class="estado-txt">Confira a digitação ou dê uma olhada no mapa.</p>
-        <button class="estado-btn-pri" onclick="document.getElementById('busca-input').value=''; window._filtrar(window._filtroAtivo)">Limpar busca</button>
-        <button class="estado-btn-sec" onclick="window._mudarTab('mapa')">Ver no mapa</button>
-      </div>`;
-      return;
-    }
 
-    data.bares.forEach(b => {
-      if (!window._bares.find(x => x.id === b.id)) window._bares.push(b);
-    });
+        <p class="estado-txt">
+          Procure pelo nome, bairro ou região entre os bares próximos de você.
+        </p>
 
-    lista.innerHTML = data.bares.map(bar => _renderCardBar(bar)).join('');
-  } catch {
-    lista.innerHTML = _estadoHtml(navigator.onLine ? 'erro' : 'sem-internet');
+        <button
+          class="estado-btn-pri"
+          onclick="document.getElementById('busca-input').value=''; window._filtrar(window._filtroAtivo)"
+        >
+          Limpar busca
+        </button>
+      </div>
+    `;
+    return;
   }
+
+  lista.innerHTML = bares.map(bar => _renderCardBar(bar)).join('');
 }

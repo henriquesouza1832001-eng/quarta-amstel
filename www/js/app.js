@@ -143,15 +143,24 @@ async function _registrarSW() {
 
 window._carregarBares = async function () {
   try {
-    let url = `${WORKER}/bares`;
-    const params = new URLSearchParams();
+    const lat = Number(window._userLat);
+    const lng = Number(window._userLng);
 
-    if (window._userLat && window._userLng) {
-      params.set('lat', window._userLat);
-      params.set('lng', window._userLng);
+    if (
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      (lat === 0 && lng === 0)
+    ) {
+      window._bares = [];
+      return [];
     }
 
-    if (params.toString()) url += `?${params}`;
+    const params = new URLSearchParams({
+      lat: String(lat),
+      lng: String(lng)
+    });
+
+    const url = `${WORKER}/bares?${params.toString()}`;
 
     const resp = await fetch(url);
     const data = await resp.json();
@@ -271,10 +280,30 @@ window._verBar = function (id) {
     ? `<div class="bar-detail__foto"><img src="${bar.foto_url}" alt="${bar.nome}" onerror="this.parentElement.innerHTML='<div class=bar-detail__foto-placeholder></div>'"></div>`
     : `<div class="bar-detail__foto"><div class="bar-detail__foto-placeholder"></div></div>`;
 
+  const abertoAgora =
+    typeof window._barAbertoAgora === 'function'
+      ? window._barAbertoAgora(bar)
+      : null;
+
   const statusHtml = bar.horario
-    ? `<div class="bar-detail__info-item">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span>${bar.horario}</span>
+    ? `<div class="bar-detail__info-item ${
+        abertoAgora === true
+          ? 'bar-detail__info-item--aberto'
+          : abertoAgora === false
+            ? 'bar-detail__info-item--fechado'
+            : ''
+      }">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        <span>${
+          abertoAgora === true
+            ? `Aberto agora · ${bar.horario}`
+            : abertoAgora === false
+              ? `Fechado agora · ${bar.horario}`
+              : bar.horario
+        }</span>
       </div>`
     : '';
 

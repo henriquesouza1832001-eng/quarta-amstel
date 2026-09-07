@@ -288,6 +288,22 @@ router.get('/bares', async (request, env) => {
     return err('Parâmetros inválidos', 400);
   }
 
+  if (
+    !Number.isFinite(lat) ||
+    !Number.isFinite(lng) ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180 ||
+    (lat === 0 && lng === 0)
+  ) {
+    return json({
+      ok: false,
+      codigo: 'LOCALIZACAO_OBRIGATORIA',
+      erro: 'Localização necessária para encontrar bares próximos.'
+    }, 400);
+  }
+
   const configRaio = await db.prepare(`SELECT valor FROM config WHERE chave = 'raio_busca_km'`).first();
   const raioKm = parseFloat(configRaio?.valor || '50');
 
@@ -304,13 +320,24 @@ router.get('/bares', async (request, env) => {
 
   const { results } = await db.prepare(query).bind(...params).all();
 
-  let bares = results;
-  if (lat && lng) {
-    bares = results
-      .map(b => ({ ...b, distancia_km: haversine(lat, lng, b.lat, b.lng) }))
-      .filter(b => b.distancia_km <= raioKm)
-      .sort((a, b) => a.distancia_km - b.distancia_km);
-  }
+  let bares = results
+    .filter(b =>
+      b.lat != null &&
+      b.lng != null &&
+      Number.isFinite(Number(b.lat)) &&
+      Number.isFinite(Number(b.lng))
+    )
+    .map(b => ({
+      ...b,
+      distancia_km: haversine(
+        lat,
+        lng,
+        Number(b.lat),
+        Number(b.lng)
+      )
+    }))
+    .filter(b => b.distancia_km <= raioKm)
+    .sort((a, b) => a.distancia_km - b.distancia_km);
 
   const hoje = new Date().toISOString().split('T')[0];
   const { results: campanhas } = await db.prepare(`
