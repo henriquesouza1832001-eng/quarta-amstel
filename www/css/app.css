@@ -2393,3 +2393,305 @@ min-height: 92px;
     height: 22px;
   }
 }
+.pin-amstel {
+  width: 40px !important;
+  height: 40px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  background: #ffffff !important;
+
+  border: 3px solid #d50020 !important;
+  border-radius: 50% !important;
+
+  transform: none !important;
+
+  box-shadow:
+    0 3px 10px rgba(0, 0, 0, 0.18),
+    0 0 0 2px rgba(255,255,255,0.8) !important;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.pin-amstel img {
+  width: 30px !important;
+  height: 30px !important;
+
+  object-fit: contain;
+
+  display: block;
+
+  border-radius: 50%;
+
+  transform: none !important;
+
+  pointer-events: none;
+}
+
+.pin-amstel--sel {
+  width: 50px !important;
+  height: 50px !important;
+
+  background: #ffffff !important;
+
+  border: 3px solid #d50020 !important;
+
+  transform: scale(1.04) !important;
+
+  box-shadow:
+    0 5px 18px rgba(207, 0, 28, 0.32),
+    0 0 0 4px rgba(255,255,255,0.9) !important;
+}
+
+.pin-amstel--sel img {
+  width: 38px !important;
+  height: 38px !important;
+}
+
+
+/* CARD DO BAR SELECIONADO */
+.card-proximo {
+  position: absolute;
+
+  left: 10px !important;
+  right: 10px !important;
+
+  bottom: calc(
+    var(--bottom-nav-height) +
+    var(--azulejo-height) +
+    10px
+  ) !important;
+
+  margin-bottom: 0 !important;
+
+  z-index: 500;
+
+  min-height: 92px;
+
+  padding: 10px !important;
+
+  display: grid !important;
+
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+
+  align-items: center;
+
+  gap: 10px;
+
+  background: #ffffff;
+
+  border: 1px solid rgba(0,0,0,0.06) !important;
+
+  border-radius: 14px !important;
+
+  box-shadow:
+    0 8px 28px rgba(0,0,0,0.18) !important;
+}
+
+.card-proximo.hidden {
+  display: none !important;
+}
+
+.card-proximo__img {
+  width: 72px !important;
+  height: 72px !important;
+
+  border-radius: 10px !important;
+
+  overflow: hidden;
+
+  background: #f8f3ea !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-proximo__img img {
+  width: 100% !important;
+  height: 100% !important;
+
+  object-fit: cover !important;
+
+  display: block;
+}
+
+.card-proximo__img--fallback {
+  background:
+    #f8f3ea
+    url('/logos/Logo-256.png')
+    center / 48px 48px
+    no-repeat !important;
+}
+
+.card-proximo__info {
+  min-width: 0;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: flex-start;
+
+  gap: 3px;
+}
+
+.card-proximo__info strong {
+  width: 100%;
+
+  font-size: 14px !important;
+
+  font-weight: 800 !important;
+
+  line-height: 1.15;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+.card-proximo__info > span {
+  width: 100%;
+
+  font-size: 11px !important;
+
+  color: #777 !important;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+.prox-status {
+  font-size: 11px !important;
+
+  font-weight: 700 !important;
+
+  color: #18864b !important;
+}
+
+.prox-status::before {
+  display: none !important;
+}
+
+.prox-status--fechado {
+  color: #777 !important;
+}
+
+.prox-promo {
+  max-width: 100%;
+
+  font-size: 11px !important;
+
+  font-weight: 700 !important;
+
+  color: #d50020 !important;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+}
+
+.btn-ver-rota {
+  min-width: 72px;
+
+  height: 52px;
+
+  padding: 0 11px !important;
+
+  border: 0;
+
+  border-radius: 11px !important;
+
+  background: #d50020 !important;
+
+  color: #ffffff !important;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 3px;
+
+  font-size: 10px !important;
+
+  font-weight: 700 !important;
+
+  cursor: pointer;
+}
+
+.btn-ver-rota svg {
+  width: 17px;
+  height: 17px;
+}
+
+
+/* STATUS DA LISTA */
+.bar-card__status--fechado {
+  color: #777 !important;
+}
+
+.bar-card__horario {
+  margin-top: 2px;
+
+  font-size: 11px;
+
+  color: #777;
+}
+
+
+/* MOBILE */
+@media (max-width: 480px) {
+
+  .card-proximo {
+    left: 8px !important;
+    right: 8px !important;
+
+    grid-template-columns: 62px minmax(0, 1fr) 66px;
+
+    min-height: 82px;
+
+    padding: 8px !important;
+
+    gap: 8px;
+  }
+
+  .card-proximo__img {
+    width: 62px !important;
+    height: 62px !important;
+  }
+
+  .card-proximo__info strong {
+    font-size: 13px !important;
+  }
+
+  .card-proximo__info > span,
+  .prox-status,
+  .prox-promo {
+    font-size: 10px !important;
+  }
+
+  .btn-ver-rota {
+    min-width: 66px;
+
+    height: 52px;
+
+    padding: 0 8px !important;
+  }
+}
