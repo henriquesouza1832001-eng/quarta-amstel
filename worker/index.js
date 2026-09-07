@@ -971,7 +971,61 @@ router.put('/admin/admins/:id/status', async (request, env) => {
 
   return json({ ok: true });
 });
+async function salvarHorariosBar(db, barId, horarios) {
+  if (!Array.isArray(horarios)) return;
 
+  for (const h of horarios) {
+    const dia = Number(h.dia_semana);
+    const aberto = Number(h.aberto) === 1 ? 1 : 0;
+
+    if (!Number.isInteger(dia) || dia < 0 || dia > 6) {
+      throw new Error('Dia da semana inválido');
+    }
+
+    const abertura =
+      aberto && h.abertura
+        ? String(h.abertura).trim()
+        : null;
+
+    const fechamento =
+      aberto && h.fechamento
+        ? String(h.fechamento).trim()
+        : null;
+
+    if (aberto) {
+      if (!/^\d{2}:\d{2}$/.test(abertura || '')) {
+        throw new Error('Horário de abertura inválido');
+      }
+
+      if (!/^\d{2}:\d{2}$/.test(fechamento || '')) {
+        throw new Error('Horário de fechamento inválido');
+      }
+    }
+
+    await db.prepare(`
+      INSERT INTO bar_horarios (
+        bar_id,
+        dia_semana,
+        aberto,
+        abertura,
+        fechamento
+      )
+      VALUES (?, ?, ?, ?, ?)
+
+      ON CONFLICT(bar_id, dia_semana)
+      DO UPDATE SET
+        aberto = excluded.aberto,
+        abertura = excluded.abertura,
+        fechamento = excluded.fechamento
+    `).bind(
+      barId,
+      dia,
+      aberto,
+      abertura,
+      fechamento
+    ).run();
+  }
+}
 router.get('/admin/bares', async (request, env) => {
   const admin = await requireAuth(request, env, ['master', 'admin', 'viewer']);
   if (!admin) return err('Não autorizado', 401);
@@ -1004,7 +1058,23 @@ router.get('/admin/bares', async (request, env) => {
   query += ` ORDER BY aprovado ASC, criado_em DESC`;
 
   const { results } = await db.prepare(query).bind(...params).all();
-  return json({ ok: true, total: results.length, bares: results });
+
+for (const bar of results) {
+  const { results: horarios } = await db.prepare(`
+    SELECT dia_semana, aberto, abertura, fechamento
+    FROM bar_horarios
+    WHERE bar_id = ?
+    ORDER BY dia_semana
+  `).bind(bar.id).all();
+
+  bar.horarios = horarios || [];
+}
+
+return json({
+  ok: true,
+  total: results.length,
+  bares: results
+});
 });
 
 router.post('/admin/bares', async (request, env) => {
@@ -1023,18 +1093,19 @@ router.post('/admin/bares', async (request, env) => {
   }
 
   const {
-    nome,
-    endereco,
-    bairro,
-    cidade,
-    estado,
-    lat,
-    lng,
-    telefone,
-    horario,
-    descricao,
-    foto_url
-  } = body;
+  nome,
+  endereco,
+  bairro,
+  cidade,
+  estado,
+  lat,
+  lng,
+  telefone,
+  horario,
+  horarios,
+  descricao,
+  foto_url
+} = body;
 
   if (!nome || !endereco || !bairro || !cidade || !estado || !lat || !lng) {
     return err(
@@ -1065,46 +1136,38 @@ router.post('/admin/bares', async (request, env) => {
 
   const db = env.DB;
 
-  const result = await db.prepare(`
-    INSERT INTO bares (
-      nome,
-      endereco,
-      bairro,
-      cidade,
-      estado,
-      lat,
-      lng,
-      telefone,
-      horario,
-      descricao,
-      foto_url,
-      aprovado,
-      criado_por,
-      aprovado_por,
-      aprovado_em
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(
-    String(nome).trim(),
-    String(endereco).trim(),
-    String(bairro).trim(),
-    cidadeNormalizada,
-    estadoNormalizado,
-    lat,
-    lng,
-    telefone || null,
-    horario || null,
-    descricao || null,
-    foto_url || null,
-    aprovado,
-    admin.id,
-    publicaAutomaticamente ? admin.id : null,
-    publicaAutomaticamente ? new Date().toISOString() : null
-  ).run();
+  const novoBar = await db.prepare(`
+  INSERT INTO bares (
+    nome, endereco, bairro, cidade, estado,
+    lat, lng, telefone, horario, descricao,
+    foto_url, aprovado, criado_por,
+    aprovado_por, aprovado_em
+  )
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  RETURNING id
+`).bind(
+  String(nome).trim(),
+  String(endereco).trim(),
+  String(bairro).trim(),
+  cidadeNormalizada,
+  estadoNormalizado,
+  lat,
+  lng,
+  telefone || null,
+  horario || null,
+  descricao || null,
+  foto_url || null,
+  aprovado,
+  admin.id,
+  publicaAutomaticamente ? admin.id : null,
+  publicaAutomaticamente ? new Date().toISOString() : null
+).first();
+
+await salvarHorariosBar(db, novoBar.id, horarios);
 
   return json({
     ok: true,
-    id: result.meta?.last_row_id,
+    id: novoBar.id,
     aprovado,
     status: aprovado ? 'publicado' : 'pendente',
     mensagem: aprovado
@@ -1298,10 +1361,26 @@ FROM bares
     }
   });
 
-  if (!updates.length) return err('Nenhum campo para atualizar');
+  if (!updates.length && !Array.isArray(body.horarios)) {
+  return err('Nenhum campo para atualizar');
+}
+
+if (updates.length) {
   params.push(id);
-  await db.prepare(`UPDATE bares SET ${updates.join(', ')}, atualizado_em = datetime('now') WHERE id = ?`).bind(...params).run();
-  return json({ ok: true });
+
+  await db.prepare(`
+    UPDATE bares
+    SET ${updates.join(', ')},
+        atualizado_em = datetime('now')
+    WHERE id = ?
+  `).bind(...params).run();
+}
+
+if (Array.isArray(body.horarios)) {
+  await salvarHorariosBar(db, id, body.horarios);
+}
+
+return json({ ok: true });
 });
 
 router.post('/admin/bares/import', async (request, env) => {
