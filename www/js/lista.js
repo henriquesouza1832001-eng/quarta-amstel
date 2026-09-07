@@ -218,19 +218,24 @@ async function _executarBusca(query) {
     return;
   }
 
-  const bares = (window._baresOriginais || []).filter(bar => {
-    const nome = String(bar.nome || '').toLowerCase();
-    const bairro = String(bar.bairro || '').toLowerCase();
-    const cidade = String(bar.cidade || '').toLowerCase();
-    const endereco = String(bar.endereco || '').toLowerCase();
+  let bares = (window._baresOriginais || []).filter(bar => {
+  const nome = String(bar.nome || '').toLowerCase();
+  const bairro = String(bar.bairro || '').toLowerCase();
+  const cidade = String(bar.cidade || '').toLowerCase();
+  const endereco = String(bar.endereco || '').toLowerCase();
 
-    return (
-      nome.includes(termo) ||
-      bairro.includes(termo) ||
-      cidade.includes(termo) ||
-      endereco.includes(termo)
-    );
-  });
+  return (
+    nome.includes(termo) ||
+    bairro.includes(termo) ||
+    cidade.includes(termo) ||
+    endereco.includes(termo)
+  );
+});
+if (window._filtroAtivo === 'abertos') {
+  bares = bares.filter(bar =>
+    window._barAbertoAgora?.(bar) === true
+  );
+}
 
   if (!bares.length) {
     lista.innerHTML = `
