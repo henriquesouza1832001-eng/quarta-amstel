@@ -119,6 +119,86 @@
     .import-zone strong{color:var(--red)}
     .import-result{margin-top:14px;padding:14px;background:var(--bg-input);border-radius:var(--radius);font-size:.82rem}
 
+/* HORÁRIOS DO BAR */
+.bar-horarios{
+  margin-top:18px;
+  padding:16px;
+  background:var(--bg-input);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+}
+
+.bar-horarios__titulo{
+  font-size:.82rem;
+  font-weight:600;
+  color:var(--text);
+  margin-bottom:4px;
+}
+
+.bar-horarios__ajuda{
+  font-size:.7rem;
+  color:var(--text3);
+  margin-bottom:12px;
+}
+
+.bar-horario-row{
+  display:grid;
+  grid-template-columns:110px 1fr 1fr;
+  gap:8px;
+  align-items:center;
+  padding:8px 0;
+  border-bottom:1px solid var(--border);
+}
+
+.bar-horario-row:last-child{
+  border-bottom:none;
+}
+
+.bar-horario-dia{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  font-size:.75rem;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.bar-horario-dia input{
+  accent-color:var(--red);
+}
+
+.bar-horario-time{
+  width:100%;
+  padding:8px;
+  border:1.5px solid var(--border);
+  border-radius:8px;
+  background:var(--bg-card);
+  color:var(--text);
+  font-family:var(--font-b);
+}
+
+.bar-horario-time:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+}
+
+.bar-horarios__acoes{
+  display:flex;
+  gap:8px;
+  margin-top:12px;
+  flex-wrap:wrap;
+}
+
+.bar-horarios__acoes button{
+  width:auto;
+}
+
+@media(max-width:520px){
+  .bar-horario-row{
+    grid-template-columns:1fr 1fr 1fr;
+  }
+}
+
     @media(max-width:768px){
       .sidebar{display:none}
       .admin-main{padding:16px}
@@ -530,7 +610,89 @@
       <div class="field"><label>Longitude *</label><input id="b-lng" type="number" step="any" placeholder="-43.9345"></div>
     </div>
     <div class="field"><label>Telefone</label><input id="b-tel" placeholder="(31) 9999-9999"></div>
-    <div class="field"><label>Horário</label><input id="b-hor" placeholder="Ter-Sáb 17h-00h"></div>
+    <div class="bar-horarios">
+  <div class="bar-horarios__titulo">Horários de funcionamento</div>
+  <div class="bar-horarios__ajuda">
+    Marque os dias em que o bar funciona e informe abertura e fechamento.
+  </div>
+
+  <div id="b-horarios-semana">
+
+    <div class="bar-horario-row" data-dia="1">
+      <label class="bar-horario-dia">
+        <input type="checkbox" class="b-dia-check" onchange="_toggleHorarioDia(this)">
+        Segunda
+      </label>
+      <input type="time" class="bar-horario-time b-abertura" disabled>
+      <input type="time" class="bar-horario-time b-fechamento" disabled>
+    </div>
+
+    <div class="bar-horario-row" data-dia="2">
+      <label class="bar-horario-dia">
+        <input type="checkbox" class="b-dia-check" onchange="_toggleHorarioDia(this)">
+        Terça
+      </label>
+      <input type="time" class="bar-horario-time b-abertura" disabled>
+      <input type="time" class="bar-horario-time b-fechamento" disabled>
+    </div>
+
+    <div class="bar-horario-row" data-dia="3">
+      <label class="bar-horario-dia">
+        <input type="checkbox" class="b-dia-check" onchange="_toggleHorarioDia(this)">
+        Quarta
+      </label>
+      <input type="time" class="bar-horario-time b-abertura" disabled>
+      <input type="time" class="bar-horario-time b-fechamento" disabled>
+    </div>
+
+    <div class="bar-horario-row" data-dia="4">
+      <label class="bar-horario-dia">
+        <input type="checkbox" class="b-dia-check" onchange="_toggleHorarioDia(this)">
+        Quinta
+      </label>
+      <input type="time" class="bar-horario-time b-abertura" disabled>
+      <input type="time" class="bar-horario-time b-fechamento" disabled>
+    </div>
+
+    <div class="bar-horario-row" data-dia="5">
+      <label class="bar-horario-dia">
+        <input type="checkbox" class="b-dia-check" onchange="_toggleHorarioDia(this)">
+        Sexta
+      </label>
+      <input type="time" class="bar-horario-time b-abertura" disabled>
+      <input type="time" class="bar-horario-time b-fechamento" disabled>
+    </div>
+
+    <div class="bar-horario-row" data-dia="6">
+      <label class="bar-horario-dia">
+        <input type="checkbox" class="b-dia-check" onchange="_toggleHorarioDia(this)">
+        Sábado
+      </label>
+      <input type="time" class="bar-horario-time b-abertura" disabled>
+      <input type="time" class="bar-horario-time b-fechamento" disabled>
+    </div>
+
+    <div class="bar-horario-row" data-dia="0">
+      <label class="bar-horario-dia">
+        <input type="checkbox" class="b-dia-check" onchange="_toggleHorarioDia(this)">
+        Domingo
+      </label>
+      <input type="time" class="bar-horario-time b-abertura" disabled>
+      <input type="time" class="bar-horario-time b-fechamento" disabled>
+    </div>
+
+  </div>
+
+  <div class="bar-horarios__acoes">
+    <button type="button" class="btn-sm btn-sm-g" onclick="_marcarSegSex()">
+      Seg → Sex
+    </button>
+
+    <button type="button" class="btn-sm btn-sm-g" onclick="_copiarPrimeiroHorario()">
+      Copiar horário
+    </button>
+  </div>
+</div>
     <div class="field"><label>URL da foto</label><input id="b-foto" placeholder="https://...foto.jpg"></div>
     <div id="b-foto-preview" style="display:none;margin-top:8px">
       <img id="b-foto-img" style="width:100%;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--border)">
@@ -1130,14 +1292,13 @@ function _abrirModalBar(id) {
     'b-end',
     'b-bairro',
     'b-tel',
-    'b-hor',
     'b-lat',
     'b-lng',
     'b-foto'
   ].forEach(f => {
     document.getElementById(f).value = '';
   });
-
+_resetHorariosBar();
   document
     .getElementById('b-foto-preview')
     .style.display = 'none';
@@ -1177,7 +1338,87 @@ function _abrirModalBar(id) {
     id || null;
 }
 
-function _fecharModalBar() { document.getElementById('modal-bar').classList.add('hidden'); }
+function _toggleHorarioDia(check) {
+  const row = check.closest('.bar-horario-row');
+  if (!row) return;
+
+  const inputs = row.querySelectorAll('.bar-horario-time');
+
+  inputs.forEach(input => {
+    input.disabled = !check.checked;
+
+    if (!check.checked) {
+      input.value = '';
+    }
+  });
+}
+
+function _resetHorariosBar() {
+  document.querySelectorAll('.bar-horario-row').forEach(row => {
+    const check = row.querySelector('.b-dia-check');
+    const abertura = row.querySelector('.b-abertura');
+    const fechamento = row.querySelector('.b-fechamento');
+
+    if (check) check.checked = false;
+
+    if (abertura) {
+      abertura.value = '';
+      abertura.disabled = true;
+    }
+
+    if (fechamento) {
+      fechamento.value = '';
+      fechamento.disabled = true;
+    }
+  });
+}
+
+function _marcarSegSex() {
+  document.querySelectorAll('.bar-horario-row').forEach(row => {
+    const dia = Number(row.dataset.dia);
+
+    if (dia >= 1 && dia <= 5) {
+      const check = row.querySelector('.b-dia-check');
+      check.checked = true;
+      _toggleHorarioDia(check);
+    }
+  });
+}
+
+function _copiarPrimeiroHorario() {
+  const rows = [...document.querySelectorAll('.bar-horario-row')];
+
+  const origem = rows.find(row => {
+    const check = row.querySelector('.b-dia-check');
+    const abertura = row.querySelector('.b-abertura');
+    const fechamento = row.querySelector('.b-fechamento');
+
+    return check?.checked && abertura?.value && fechamento?.value;
+  });
+
+  if (!origem) {
+    alert('Preencha o horário de pelo menos um dia marcado.');
+    return;
+  }
+
+  const aberturaOrigem =
+    origem.querySelector('.b-abertura').value;
+
+  const fechamentoOrigem =
+    origem.querySelector('.b-fechamento').value;
+
+  rows.forEach(row => {
+    const check = row.querySelector('.b-dia-check');
+
+    if (!check?.checked) return;
+
+    row.querySelector('.b-abertura').value =
+      aberturaOrigem;
+
+    row.querySelector('.b-fechamento').value =
+      fechamentoOrigem;
+  });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('b-foto')?.addEventListener('input', function() {
