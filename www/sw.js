@@ -1,7 +1,4 @@
-// ============================================
-// ============================================
-
-const CACHE = 'quarta-amstel-v5';
+const CACHE = 'quarta-amstel-v6';
 const ASSETS = ['/', '/index.html', '/css/app.css', '/js/app.js', '/js/mapa.js', '/js/lista.js', '/js/push.js', '/manifest.json', '/logos/Logo-256.png', '/logos/Logo-512.png', '/logos/Azulejo Full.png'];
 
 self.addEventListener('install', e => {
@@ -19,18 +16,14 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   if (url.pathname.startsWith('/api') || url.hostname.includes('workers.dev')) return;
-
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const network = fetch(e.request).then(resp => {
-        if (resp.ok) {
-          const clone = resp.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return resp;
-      });
-      return cached || network;
-    })
+    fetch(e.request).then(resp => {
+      if (resp.ok) {
+        const clone = resp.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+      }
+      return resp;
+    }).catch(() => caches.match(e.request))
   );
 });
 
