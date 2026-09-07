@@ -70,13 +70,17 @@ window._initMapa = function (loc) {
   _esconderLoadingMapa();
   window._mapaAguardandoLoc = false;
 
-  window._mapa = _mapa = L.map('mapa', {
+ window._mapa = _mapa = L.map('mapa', {
     center: centro,
     zoom: zoom,
     zoomControl: false,
     attributionControl: false,
     preferCanvas: true,
     renderer: L.canvas(),
+  });
+
+  _mapa.on('click', () => {
+    _fecharCardMapa();
   });
 
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
@@ -141,7 +145,11 @@ window._filtrarMapa = function (filtro) {
   document.getElementById('mapa-filtro-' + filtro)?.classList.add('active');
 
   let bares = window._bares || [];
-  if (filtro === 'abertos') bares = bares.filter(b => b.horario);
+  if (filtro === 'abertos') {
+    bares = bares.filter(b => {
+      return window._barAbertoAgora?.(b) === true;
+    });
+  }
   _renderMarcadores(bares);
 };
 
@@ -179,74 +187,140 @@ function _carregarTiles(dark) {
 }
 
 function _pinHtml(selecionado) {
-  const cls = selecionado ? 'pin-amstel pin-amstel--sel' : 'pin-amstel';
-  return `<div class="${cls}">
-    <img src="/logos/Logo-256.png" style="width:24px;height:24px;object-fit:contain;transform:rotate(45deg);border-radius:50%;" onerror="this.style.display='none'">
-  </div>`;
+  const cls = selecionado
+    ? 'pin-amstel pin-amstel--sel'
+    : 'pin-amstel';
+
+  return `
+    <div class="${cls}">
+      <img
+        src="/logos/Logo-256.png"
+        alt=""
+        draggable="false"
+        onerror="this.style.display='none'"
+      >
+    </div>
+  `;
 }
 
-window._renderMarcadoresMapa = function(bares) { _renderMarcadores(bares); };
+function _criarIconePin(selecionado = false) {
+  const tamanho = selecionado ? 50 : 40;
 
-function _renderMarcadores(bares) {
-  _marcadores.forEach(m => _mapa.removeLayer(m));
-  _marcadores = [];
+  return L.divIcon({
+    html: _pinHtml(selecionado),
+    iconSize: [tamanho, tamanho],
+    iconAnchor: [tamanho / 2, tamanho / 2],
+    className: '',
+  });
+}
+
+function _fecharCardMapa() {
+  if (_barSelecionado && _barSelecionado._marker) {
+    _barSelecionado._marker.setIcon(_criarIconePin(false));
+    _barSelecionado._marker.setZIndexOffset(0);
+  }
+
   _barSelecionado = null;
+  window._barProximo = null;
 
   const card = document.getElementById('card-proximo');
-  if (card) card.classList.add('hidden');
 
-  bares = bares.filter(b => b.lat != null && b.lng != null && !isNaN(b.lat) && !isNaN(b.lng));
+  if (card) {
+    card.classList.add('hidden');
+    card.innerHTML = '';
+  }
+}
 
-  bares.forEach((bar, i) => {
-    const isSel = i === 0;
-    const marker = L.marker([bar.lat, bar.lng], {
-      icon: L.divIcon({
-        html: _pinHtml(isSel),
-        iconSize: isSel ? [44, 54] : [36, 44],
-        iconAnchor: isSel ? [22, 54] : [18, 44],
-        className: '',
-      }),
-      zIndexOffset: isSel ? 1000 : 0,
-    });
+window._fecharCardMapa = _fecharCardMapa;
 
-    marker.on('click', () => {
-      if (_barSelecionado && _barSelecionado._marker) {
-        _barSelecionado._marker.setIcon(L.divIcon({
-          html: _pinHtml(false),
-          iconSize: [36, 44],
-          iconAnchor: [18, 44],
-          className: '',
-        }));
-        _barSelecionado._marker.setZIndexOffset(0);
+window._renderMarcadoresMapa = function (bares) {
+  _renderMarcadores(bares);
+};
+
+function _renderMarcadores(bares) {
+  if (!_mapa) return;
+
+  _marcadores.forEach(marker => {
+    try {
+      _mapa.removeLayer(marker);
+    } catch {}
+  });
+
+  _marcadores = [];
+  _barSelecionado = null;
+  window._barProximo = null;
+
+  const card = document.getElementById('card-proximo');
+
+  if (card) {
+    card.classList.add('hidden');
+    card.innerHTML = '';
+  }
+
+  bares = (bares || []).filter(bar =>
+    bar.lat != null &&
+    bar.lng != null &&
+    !isNaN(parseFloat(bar.lat)) &&
+    !isNaN(parseFloat(bar.lng))
+  );
+
+  bares.forEach(bar => {
+    const marker = L.marker(
+      [parseFloat(bar.lat), parseFloat(bar.lng)],
+      {
+        icon: _criarIconePin(false),
+        zIndexOffset: 0,
       }
-      marker.setIcon(L.divIcon({
-        html: _pinHtml(true),
-        iconSize: [44, 54],
-        iconAnchor: [22, 54],
-        className: '',
-      }));
-      marker.setZIndexOffset(1000);
-      bar._marker = marker;
-      _barSelecionado = bar;
-      _mostrarCardBar(bar);
-    });
+    );
 
     bar._marker = marker;
-    if (isSel) {
-      bar._marker = marker;
+
+    marker.on('click', event => {
+      if (event?.originalEvent) {
+        L.DomEvent.stopPropagation(event.originalEvent);
+      }
+
+      if (
+        _barSelecionado &&
+        _barSelecionado !== bar &&
+        _barSelecionado._marker
+      ) {
+        _barSelecionado._marker.setIcon(_criarIconePin(false));
+        _barSelecionado._marker.setZIndexOffset(0);
+      }
+
+      marker.setIcon(_criarIconePin(true));
+      marker.setZIndexOffset(1000);
+
       _barSelecionado = bar;
-    }
+      window._barProximo = bar;
+
+      _mostrarCardBar(bar);
+    });
 
     marker.addTo(_mapa);
     _marcadores.push(marker);
   });
-  const temGPS = window._locationState?.status === 'ready' && window._locationState?.coords;
-  if (temGPS && bares.length > 0 && _mapa && _marcadores.length > 0) {
+
+  const temGPS =
+    window._locationState?.status === 'ready' &&
+    window._locationState?.coords;
+
+  if (
+    temGPS &&
+    bares.length > 0 &&
+    _mapa &&
+    _marcadores.length > 0
+  ) {
     try {
       const group = L.featureGroup(_marcadores);
       const bounds = group.getBounds();
+
       if (bounds.isValid()) {
-        _mapa.fitBounds(bounds.pad(0.2), { maxZoom: 14 });
+        _mapa.fitBounds(bounds.pad(0.2), {
+          maxZoom: 14,
+          animate: true
+        });
       }
     } catch (e) {
       console.warn('[mapa] fitBounds inválido:', e);
@@ -261,35 +335,95 @@ function _mostrarCardBar(bar) {
   const card = document.getElementById('card-proximo');
   if (!card) return;
 
-  const d = bar.distancia_km;
-  const distStr = d != null
-    ? `${d < 1 ? Math.round(d * 1000) + 'm' : d.toFixed(1) + 'km'} · ${bar.bairro}`
-    : bar.bairro;
+  const d = Number(bar.distancia_km);
 
-  const statusHtml = bar.horario
-    ? `<div class="prox-status">Aberto · ${bar.horario}</div>`
-    : '';
+  const distStr = Number.isFinite(d)
+    ? `${d < 1
+        ? Math.round(d * 1000) + ' m'
+        : d.toFixed(1) + ' km'} · ${bar.bairro || ''}`
+    : (bar.bairro || '');
+
+  const abertoAgora =
+    typeof window._barAbertoAgora === 'function'
+      ? window._barAbertoAgora(bar)
+      : null;
+
+  let statusHtml = '';
+
+  if (abertoAgora === true) {
+    statusHtml = `
+      <div class="prox-status">
+        Aberto agora${bar.horario ? ` · ${bar.horario}` : ''}
+      </div>
+    `;
+  } else if (abertoAgora === false) {
+    statusHtml = `
+      <div class="prox-status prox-status--fechado">
+        Fechado agora
+      </div>
+    `;
+  } else if (bar.horario) {
+    statusHtml = `
+      <div class="prox-status">
+        ${bar.horario}
+      </div>
+    `;
+  }
 
   const promoHtml = bar.campanha_ativa
-    ? `<div class="prox-promo">🍺 ${bar.campanha_ativa.promocao}</div>`
+    ? `
+      <div class="prox-promo">
+        ${bar.campanha_ativa.promocao}
+      </div>
+    `
     : '';
 
   const imgHtml = bar.foto_url
-    ? `<img src="${bar.foto_url}" alt="${bar.nome}" onerror="this.parentElement.innerHTML='🍺'">`
-    : '🍺';
+    ? `
+      <img
+        src="${bar.foto_url}"
+        alt="${bar.nome || ''}"
+        onerror="this.style.display='none'; this.parentElement.classList.add('card-proximo__img--fallback')"
+      >
+    `
+    : `<img src="/logos/Logo-256.png" alt="Amstel">`;
 
-  const nomeEscapado = bar.nome.replace(/'/g, "\\'");
+  const nomeEscapado = String(bar.nome || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'");
 
   card.innerHTML = `
-    <div class="card-proximo__img">${imgHtml}</div>
+    <div class="card-proximo__img">
+      ${imgHtml}
+    </div>
+
     <div class="card-proximo__info">
-      <strong>${bar.nome}</strong>
+      <strong>${bar.nome || ''}</strong>
       <span>${distStr}</span>
+
       ${statusHtml}
       ${promoHtml}
     </div>
-    <button class="btn-ver-rota" onclick="window._abrirSeletorRota(${bar.lat}, ${bar.lng}, '${nomeEscapado}')">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+
+    <button
+      class="btn-ver-rota"
+      onclick="window._abrirSeletorRota(
+        ${bar.lat},
+        ${bar.lng},
+        '${nomeEscapado}'
+      )"
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+      >
+        <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+      </svg>
+
       Ver rota
     </button>
   `;
@@ -298,6 +432,44 @@ function _mostrarCardBar(bar) {
 }
 
 const _origCarregar = window._carregarBares;
+window._barAbertoAgora = function (bar, agora = new Date()) {
+  if (!bar || !bar.horario) return null;
+
+  const horario = String(bar.horario).trim();
+  const match = horario.match(
+    /(\d{1,2}):(\d{2})\s*(?:-|–|—|às|a)\s*(\d{1,2}):(\d{2})/i
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const aberturaHora = Number(match[1]);
+  const aberturaMin = Number(match[2]);
+  const fechamentoHora = Number(match[3]);
+  const fechamentoMin = Number(match[4]);
+
+  if (
+    aberturaHora > 23 ||
+    fechamentoHora > 23 ||
+    aberturaMin > 59 ||
+    fechamentoMin > 59
+  ) {
+    return null;
+  }
+  const atual = agora.getHours() * 60 + agora.getMinutes();
+  const abertura = aberturaHora * 60 + aberturaMin;
+  const fechamento = fechamentoHora * 60 + fechamentoMin;
+  if (fechamento > abertura) {
+    return atual >= abertura && atual < fechamento;
+  }
+  if (fechamento < abertura) {
+    return atual >= abertura || atual < fechamento;
+  }
+
+  return false;
+};
+
 window._carregarBares = async function () {
   const bares = await _origCarregar();
   if (_mapa) _renderMarcadores(bares);

@@ -117,9 +117,20 @@ function _renderCardBar(bar) {
       : `${bar.distancia_km.toFixed(1)} km · ${bar.bairro}`
     : bar.bairro;
 
-  const statusHtml = bar.horario
-    ? `<div class="bar-card__status">Aberto até ${bar.horario}</div>`
-    : '';
+  const abertoAgora =
+    typeof window._barAbertoAgora === 'function'
+      ? window._barAbertoAgora(bar)
+      : null;
+
+  let statusHtml = '';
+
+  if (abertoAgora === true) {
+    statusHtml = `<div class="bar-card__status">Aberto agora · ${bar.horario}</div>`;
+  } else if (abertoAgora === false) {
+    statusHtml = `<div class="bar-card__status bar-card__status--fechado">Fechado agora</div>`;
+  } else if (bar.horario) {
+    statusHtml = `<div class="bar-card__horario">${bar.horario}</div>`;
+  }
 
   const campanhaHtml = bar.campanha_ativa
     ? `<div class="bar-card__campanha">
@@ -168,7 +179,10 @@ window._filtrar = function (filtro) {
   let bares = window._baresOriginais || [];
 
   if (filtro === 'abertos') {
-    bares = bares.filter(b => b.horario);
+    bares = bares.filter(b => {
+      return window._barAbertoAgora?.(b) === true;
+    });
+
     if (!bares.length) {
       document.getElementById('lista-bares').innerHTML = _estadoHtml('sem-abertos');
       return;
