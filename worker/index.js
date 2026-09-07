@@ -564,7 +564,6 @@ router.get('/bares/:id', async (request, env) => {
   WHERE bar_id = ?
   ORDER BY dia_semana
 `).bind(id).all();
-
 bar.horarios = horarios || [];
   if (!bar) return err('Bar não encontrado', 404);
 
@@ -1515,7 +1514,69 @@ router.get('/admin/campanhas', async (request, env) => {
   });
 });
 
+router.delete('/admin/campanhas/:id', async (request, env) => {
+  const admin = await requireAuth(request, env);
+  if (!admin) return err('Não autorizado', 401);
 
+  if (!podeExcluirConteudo(admin)) {
+    return err('Sem permissão para excluir campanhas.', 403);
+  }
+
+  const id = String(request.params.id || '').trim();
+
+  if (!/^[a-f0-9]{16}$/i.test(id)) {
+    return err('ID inválido', 400);
+  }
+
+  const db = env.DB;
+
+  const campanha = await db.prepare(`
+    SELECT *
+    FROM campanhas
+    WHERE id = ?
+  `).bind(id).first();
+
+  if (!campanha) {
+    return err('Campanha não encontrada', 404);
+  }
+
+  if (campanha.bar_id) {
+    const bar = await db.prepare(`
+      SELECT cidade, estado
+      FROM bares
+      WHERE id = ?
+    `).bind(campanha.bar_id).first();
+
+    if (
+      !bar ||
+      !adminPodeGerenciarLocal(admin, bar.cidade, bar.estado)
+    ) {
+      return err('Sem permissão para excluir esta campanha.', 403);
+    }
+  } else if (campanha.cidade || campanha.estado) {
+    if (
+      !adminPodeGerenciarLocal(
+        admin,
+        campanha.cidade || '',
+        campanha.estado || ''
+      )
+    ) {
+      return err('Sem permissão para excluir esta campanha.', 403);
+    }
+  } else if (
+    String(admin.role).toLowerCase() !== 'master' &&
+    Number(admin.can_manage_all_regions || 0) !== 1
+  ) {
+    return err('Sem permissão para excluir campanha nacional.', 403);
+  }
+
+  await db.prepare(`
+    DELETE FROM campanhas
+    WHERE id = ?
+  `).bind(id).run();
+
+  return json({ ok: true });
+});
 router.post('/admin/campanhas', async (request, env) => {
   const admin = await requireAuth(request, env);
   if (!admin) return err('Não autorizado', 401);

@@ -95,7 +95,11 @@ window._iniciarGeolocalizacao = function () {
       state.error = err.code;
       _emitLocationState();
     },
-    { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+{
+  enableHighAccuracy: false,
+  timeout: 800,
+  maximumAge: 600000
+}
   );
 };
 
