@@ -8,8 +8,12 @@ window._renderLista = function (bares, estado) {
 
   if (estado === 'loading') {
     lista.innerHTML = _estadoHtml('loading');
+    document.querySelector('.filtros-row')?.classList.add('hidden');
+    document.querySelector('.busca-lista-wrap')?.classList.add('hidden');
     return;
   }
+  document.querySelector('.filtros-row')?.classList.remove('hidden');
+  document.querySelector('.busca-lista-wrap')?.classList.remove('hidden');
 
   if (estado === 'erro') {
     lista.innerHTML = _estadoHtml('erro');
