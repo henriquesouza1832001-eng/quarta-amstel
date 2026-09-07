@@ -62,10 +62,22 @@ window._initMapa = function (loc) {
 
   const locValida = (l) => l && !isNaN(parseFloat(l.lat)) && !isNaN(parseFloat(l.lng));
   const locEfetiva = locValida(loc) ? loc : null;
-  const centro = locEfetiva
-    ? [+locEfetiva.lat, +locEfetiva.lng]
-    : [-18.5, -45.5];
-  const zoom = locEfetiva ? 13 : 6;
+const locCache =
+  window._locSalvaRecente &&
+  !isNaN(parseFloat(window._locSalvaRecente.lat)) &&
+  !isNaN(parseFloat(window._locSalvaRecente.lng))
+    ? window._locSalvaRecente
+    : null;
+
+const locInicial = locEfetiva || locCache;
+
+const centro = locInicial
+  ? [+locInicial.lat, +locInicial.lng]
+  : [-14.2350, -51.9253];
+
+const zoom = locInicial ? 13 : 4;
+
+_userLoc = locInicial;
   _userLoc = locEfetiva;
   _esconderLoadingMapa();
   window._mapaAguardandoLoc = false;
@@ -88,10 +100,10 @@ window._initMapa = function (loc) {
 
   _carregarTiles(isDark);
 
-  if (locEfetiva) _renderUserMarker(locEfetiva);
-  if (window._bares?.length && window._locationState?.status === 'ready') {
-    _renderMarcadores(window._bares);
-  }
+if (locEfetiva) {
+if (window._bares?.length) {
+  _renderMarcadores(window._bares);
+}}
 
   const observer = new MutationObserver(() => {
     const dark = document.documentElement.getAttribute('data-theme') === 'dark';
