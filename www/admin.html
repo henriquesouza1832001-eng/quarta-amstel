@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -176,27 +175,6 @@
     </div>
     <div class="nav-item hidden" id="nav-seguranca" onclick="_nav('seguranca')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-     <th>Status</th>
-          <th>Ação</th>
-        </tr>
-      </thead>
-
-      <tbody id="admins-tbody">
-        <tr>
-          <td
-            colspan="7"
-            style="
-              text-align:center;
-              color:var(--text3);
-            "
-          >
-            Carregando...
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
       Segurança
     </div>
     <div
@@ -324,6 +302,56 @@
         <table>
           <thead><tr><th>Título</th><th>Promoção</th><th>Bar</th><th>Cidade</th><th>Período</th><th>Status</th></tr></thead>
           <tbody id="campanhas-tbody"><tr><td colspan="6" style="text-align:center;color:var(--text3)">Carregando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ADMINISTRADORES -->
+    <div id="page-admins" class="page">
+      <div class="page-header">
+        <h2>Administradores</h2>
+      </div>
+
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px">
+        <h3 style="font-family:var(--font-d);font-size:1.15rem;font-weight:900;margin-bottom:16px">Novo responsável</h3>
+
+        <div class="field"><label>Nome *</label><input id="adm-nome"></div>
+        <div class="field"><label>Email *</label><input id="adm-email" type="email"></div>
+        <div class="field"><label>Senha inicial *</label><input id="adm-senha" type="password" minlength="12" placeholder="Mínimo 12 caracteres"></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field"><label>Estado *</label><input id="adm-estado" maxlength="2" placeholder="MG"></div>
+          <div class="field"><label>Cidade</label><input id="adm-cidade" placeholder="Vazio = estado inteiro"></div>
+        </div>
+
+        <div class="field">
+          <label>Perfil</label>
+          <select id="adm-role">
+            <option value="admin">Administrador regional</option>
+            <option value="viewer">Somente visualização</option>
+          </select>
+        </div>
+
+        <button class="btn btn-r" onclick="_criarAdmin()">Criar administrador</button>
+        <div id="adm-result" class="push-result hidden"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Perfil</th>
+              <th>Região</th>
+              <th>2FA</th>
+              <th>Status</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="admins-tbody">
+            <tr><td colspan="7" style="text-align:center;color:var(--text3)">Carregando...</td></tr>
+          </tbody>
         </table>
       </div>
     </div>
