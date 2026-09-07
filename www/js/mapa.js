@@ -100,16 +100,17 @@ window._initMapa = function (loc) {
   });
 };
 
-window._renderUserMarker = function (loc) {
+window._renderUserMarker = function (loc, localizando) {
   if (!_mapa) return;
   if (_userMarker) _mapa.removeLayer(_userMarker);
   const userIcon = L.divIcon({
-    html: `<div class="user-pin">
+    html: `<div class="user-pin ${localizando ? 'user-pin--localizando' : ''}">
       <div class="user-pin__dot"></div>
       <div class="user-pin__halo"></div>
+      ${localizando ? '<div class="user-pin__ring"></div>' : ''}
     </div>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    iconSize: [48, 48],
+    iconAnchor: [24, 24],
     className: '',
   });
   _userMarker = L.marker([loc.lat, loc.lng], { icon: userIcon, zIndexOffset: -100 }).addTo(_mapa);

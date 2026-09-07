@@ -1344,13 +1344,54 @@ html, body {
 /* ── Ponto do usuário ── */
 .user-pin {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.user-pin__dot {
+  width: 14px;
+  height: 14px;
+  background: #4285F4;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(66,133,244,0.4);
+  position: relative;
+  z-index: 2;
+}
+
+.user-pin__halo {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  background: rgba(66, 133, 244, 0.18);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+/* Anel pulsando — só aparece enquanto localizando */
+.user-pin__ring {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border: 2px solid rgba(66, 133, 244, 0.5);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: gps-pulse 1.4s ease-out infinite;
+  z-index: 0;
+}
+
+@keyframes gps-pulse {
+  0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+}
 .user-pin__dot {
   width: 14px;
   height: 14px;
