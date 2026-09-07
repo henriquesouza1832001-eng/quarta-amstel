@@ -461,7 +461,11 @@ html, body {
 
 @media (min-width: 768px) {
   .descobrir-header {
-    padding: 28px calc(50% - 400px) 8px;
+    padding: 28px 20px 8px;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .busca-lista-wrap {
@@ -686,7 +690,7 @@ html, body {
 .bar-card__placeholder {
   width: 100%;
   height: 100%;
-  background-color: var(--amstel-red);
+  background-color: #f0e8d8;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -695,10 +699,10 @@ html, body {
 .bar-card__placeholder::after {
   content: '';
   display: block;
-  width: 48px;
-  height: 48px;
+  width: 36px;
+  height: 36px;
   background: url('/logos/Logo-256.png') center/contain no-repeat;
-  opacity: 0.9;
+  opacity: 0.35;
 }
 
 .bar-card__body {
@@ -1525,6 +1529,25 @@ html, body {
 /* ── SKELETON ── */
 .skeleton-list {
   width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .skeleton-list {
+    display: block;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 0 var(--page-padding-tablet);
+  }
+}
+
+@media (min-width: 1024px) {
+  .skeleton-list {
+    max-width: 1200px;
+    padding: 0 var(--page-padding-desktop);
+  }
 }
 
 .skeleton-card {
