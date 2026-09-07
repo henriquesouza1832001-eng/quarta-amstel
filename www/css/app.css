@@ -507,12 +507,19 @@ html, body {
 
 .page-title {
   font-family: var(--font-brand);
-  font-size: clamp(30px, 8vw, 44px);
+  font-size: clamp(28px, 5vw, 38px);
   font-weight: 900;
-  line-height: 1;
-  text-wrap: balance;
+  line-height: 1.05;
   color: var(--text-primary);
   letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .page-title {
+    white-space: normal;
+    font-size: clamp(26px, 7vw, 32px);
+  }
 }
 
 .page-subtitle {
@@ -1535,11 +1542,14 @@ html, body {
 
 @media (min-width: 768px) {
   .skeleton-list {
-    display: block;
     max-width: 900px;
     margin: 0 auto;
     width: 100%;
     padding: 0 var(--page-padding-tablet);
+  }
+
+  .skeleton-card {
+    padding: 14px 0;
   }
 }
 
