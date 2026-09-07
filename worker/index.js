@@ -48,11 +48,37 @@ const SECURITY_HEADERS = {
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(self)',
 };
 
+const ALLOWED_ORIGINS = new Set([
+  'https://quarta-amstel.pages.dev',
+  'https://amstelbh.com.br',
+  'https://www.amstelbh.com.br',
+]);
+
 const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Max-Age': '86400',
 };
+
+function _aplicarCors(response, request) {
+  const origin = request.headers.get('Origin');
+  const headers = new Headers(response.headers);
+
+  Object.entries(CORS_HEADERS).forEach(([k, v]) => {
+    headers.set(k, v);
+  });
+
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    headers.set('Access-Control-Allow-Origin', origin);
+    headers.set('Vary', 'Origin');
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -201,6 +227,33 @@ async function requireAuth(request, env, roles = ['master', 'admin', 'viewer']) 
   if (!payload) return null;
   if (!roles.includes(payload.role)) return null;
   return payload;
+}
+
+function adminPodeGerenciarLocal(admin, cidade, estado) {
+  if (!admin) return false;
+
+  if (admin.role === 'master') {
+    return true;
+  }
+
+  const cidadeBar = String(cidade || '').trim().toLowerCase();
+  const estadoBar = String(estado || '').trim().toUpperCase();
+
+  const cidadeAdmin = String(admin.cidade || '').trim().toLowerCase();
+  const estadoAdmin = String(admin.estado || '').trim().toUpperCase();
+
+  if (cidadeAdmin) {
+    return (
+      cidadeBar === cidadeAdmin &&
+      (!estadoAdmin || estadoBar === estadoAdmin)
+    );
+  }
+
+  if (estadoAdmin) {
+    return estadoBar === estadoAdmin;
+  }
+
+  return false;
 }
 
 async function hashPassword(password) {
@@ -457,13 +510,22 @@ router.post('/admin/login', async (request, env) => {
 
   const token = await signJWT({ id: admin.id, email: admin.email, role: admin.role, cidade: admin.cidade, estado: admin.estado }, env.JWT_SECRET);
 
-  const refreshToken = Array.from(crypto.getRandomValues(new Uint8Array(32))).map(b => b.toString(16).padStart(2, '0')).join('');
-  await db.prepare(`INSERT INTO sessoes (admin_id, refresh_token, ip, user_agent, expira_em) VALUES (?, ?, ?, ?, datetime('now', '+7 days'))`)
-    .bind(admin.id, refreshToken, ip, request.headers.get('User-Agent') || '').run();
+  await db.prepare(`
+    UPDATE admins
+    SET ultimo_login = datetime('now')
+    WHERE id = ?
+  `).bind(admin.id).run();
 
-  await db.prepare(`UPDATE admins SET ultimo_login = datetime('now') WHERE id = ?`).bind(admin.id).run();
-
-  return json({ ok: true, token, refresh_token: refreshToken, admin: { id: admin.id, nome: admin.nome, email: admin.email, role: admin.role } });
+  return json({
+    ok: true,
+    token,
+    admin: {
+      id: admin.id,
+      nome: admin.nome,
+      email: admin.email,
+      role: admin.role
+    }
+  });
 });
 
 router.post('/admin/totp/setup', async (request, env) => {
@@ -535,14 +597,26 @@ router.post('/admin/bares', async (request, env) => {
     return err('Campos obrigatórios: nome, endereco, bairro, cidade, estado, lat, lng');
   }
 
-  if (hasSQLInjection(nome) || hasSQLInjection(endereco)) return err('Dados inválidos', 400);
-  if (!/^[A-Z]{2}$/.test(estado)) return err('Estado inválido (use UF ex: MG)');
+  if (hasSQLInjection(nome) || hasSQLInjection(endereco)) {
+    return err('Dados inválidos', 400);
+  }
+
+  const estadoNormalizado = String(estado).trim().toUpperCase();
+  const cidadeNormalizada = String(cidade).trim();
+
+  if (!/^[A-Z]{2}$/.test(estadoNormalizado)) {
+    return err('Estado inválido (use UF ex: MG)', 400);
+  }
+
+  if (!adminPodeGerenciarLocal(admin, cidadeNormalizada, estadoNormalizado)) {
+    return err('Você não possui permissão para cadastrar bares nesta região.', 403);
+  }
 
   const db = env.DB;
   const result = await db.prepare(`
     INSERT INTO bares (nome, endereco, bairro, cidade, estado, lat, lng, telefone, horario, descricao, foto_url, aprovado)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(nome, endereco, bairro, cidade, estado.toUpperCase(), lat, lng, telefone || null, horario || null, descricao || null, foto_url || null, admin.role === 'master' ? 1 : 0).run();
+  `).bind(nome, endereco, bairro, cidadeNormalizada, estadoNormalizado, lat, lng, telefone || null, horario || null, descricao || null, foto_url || null, admin.role === 'master' ? 1 : 0).run();
 
   return json({ ok: true, id: result.meta?.last_row_id }, 201);
 });
@@ -555,7 +629,28 @@ router.put('/admin/bares/:id/aprovar', async (request, env) => {
   if (!/^[a-f0-9]{16}$/.test(id)) return err('ID inválido', 400);
 
   const db = env.DB;
-  await db.prepare(`UPDATE bares SET aprovado = 1, atualizado_em = datetime('now') WHERE id = ?`).bind(id).run();
+
+  const bar = await db.prepare(`
+    SELECT id, cidade, estado
+    FROM bares
+    WHERE id = ?
+  `).bind(id).first();
+
+  if (!bar) {
+    return err('Bar não encontrado', 404);
+  }
+
+  if (!adminPodeGerenciarLocal(admin, bar.cidade, bar.estado)) {
+    return err('Você não possui permissão para aprovar este bar.', 403);
+  }
+
+  await db.prepare(`
+    UPDATE bares
+    SET aprovado = 1,
+        atualizado_em = datetime('now')
+    WHERE id = ?
+  `).bind(id).run();
+
   return json({ ok: true });
 });
 
@@ -567,7 +662,49 @@ router.put('/admin/bares/:id', async (request, env) => {
   if (!/^[a-f0-9]{16}$/.test(id)) return err('ID inválido', 400);
 
   let body;
-  try { body = await request.json(); } catch { return err('JSON inválido'); }
+  try {
+    body = await request.json();
+  } catch {
+    return err('JSON inválido');
+  }
+
+  const db = env.DB;
+
+  const barAtual = await db.prepare(`
+    SELECT id, cidade, estado
+    FROM bares
+    WHERE id = ?
+  `).bind(id).first();
+
+  if (!barAtual) {
+    return err('Bar não encontrado', 404);
+  }
+
+  if (!adminPodeGerenciarLocal(admin, barAtual.cidade, barAtual.estado)) {
+    return err('Você não possui permissão para editar este bar.', 403);
+  }
+
+  const cidadeDestino =
+    body.cidade !== undefined
+      ? String(body.cidade).trim()
+      : barAtual.cidade;
+
+  const estadoDestino =
+    body.estado !== undefined
+      ? String(body.estado).trim().toUpperCase()
+      : barAtual.estado;
+
+  if (!adminPodeGerenciarLocal(admin, cidadeDestino, estadoDestino)) {
+    return err('Não é permitido mover o bar para fora da sua região.', 403);
+  }
+
+  if (body.estado !== undefined) {
+    body.estado = estadoDestino;
+  }
+
+  if (body.cidade !== undefined) {
+    body.cidade = cidadeDestino;
+  }
 
   const campos = ['nome', 'endereco', 'bairro', 'cidade', 'estado', 'lat', 'lng', 'telefone', 'horario', 'descricao', 'foto_url', 'ativo'];
   const updates = [];
@@ -583,8 +720,6 @@ router.put('/admin/bares/:id', async (request, env) => {
 
   if (!updates.length) return err('Nenhum campo para atualizar');
   params.push(id);
-
-  const db = env.DB;
   await db.prepare(`UPDATE bares SET ${updates.join(', ')}, atualizado_em = datetime('now') WHERE id = ?`).bind(...params).run();
   return json({ ok: true });
 });
@@ -610,6 +745,17 @@ router.post('/admin/bares/import', async (request, env) => {
         erros.push(`Bar "${b.nome || '?'}" sem campos obrigatórios`);
         continue;
       }
+
+      const cidadeImport = String(b.cidade).trim();
+      const estadoImport = String(b.estado).trim().toUpperCase();
+
+      if (!adminPodeGerenciarLocal(admin, cidadeImport, estadoImport)) {
+        erros.push(`Bar "${b.nome}" fora da região permitida para este administrador`);
+        continue;
+      }
+
+      b.cidade = cidadeImport;
+      b.estado = estadoImport;
       await db.prepare(`
         INSERT INTO bares (nome, endereco, bairro, cidade, estado, lat, lng, telefone, horario, descricao, aprovado)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
@@ -910,13 +1056,20 @@ router.all('*', () => err('Rota não encontrada', 404));
 export default {
   async fetch(request, env, ctx) {
     const block = await securityMiddleware(request, env);
-    if (block) return block;
+
+    if (block) {
+      return _aplicarCors(block, request);
+    }
 
     try {
-      return await router.handle(request, env, ctx);
+      const response = await router.handle(request, env, ctx);
+      return _aplicarCors(response, request);
     } catch (e) {
       console.error('[Worker Error]', e);
-      return err('Erro interno do servidor', 500);
+      return _aplicarCors(
+        err('Erro interno do servidor', 500),
+        request
+      );
     }
   },
 
