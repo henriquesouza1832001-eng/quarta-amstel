@@ -38,9 +38,17 @@ function _estadoHtml(tipo) {
   const ir = `<button class="estado-btn-sec" onclick="window._mudarTab('mapa')">Ver no mapa</button>`;
 
   const estados = {
-    loading: `<div class="estado-wrap">
-      <div class="estado-spinner"></div>
-      <p class="estado-txt">Buscando bares perto de você...</p>
+    loading: `<div class="skeleton-list">
+      ${[1,2,3,4].map(() => `
+        <div class="skeleton-card">
+          <div class="skeleton-img"></div>
+          <div class="skeleton-body">
+            <div class="skeleton-line skeleton-line--title"></div>
+            <div class="skeleton-line skeleton-line--sub"></div>
+            <div class="skeleton-line skeleton-line--tag"></div>
+          </div>
+        </div>
+      `).join('')}
     </div>`,
 
     vazio: `<div class="estado-wrap">
@@ -130,7 +138,7 @@ function _renderCardBar(bar) {
     : '';
 
   const imgHtml = bar.foto_url
-    ? `<img src="${bar.foto_url}" alt="${bar.nome}" loading="lazy" onerror="this.outerHTML='<div class=\\'bar-card__placeholder\\'></div>'">`
+    ? `<img src="${bar.foto_url}" alt="${bar.nome}" loading="lazy" onload="this.classList.add('loaded')" onerror="this.outerHTML='<div class=\\'bar-card__placeholder\\'></div>'">`
     : `<div class="bar-card__placeholder"></div>`;
 
   return `
@@ -143,7 +151,7 @@ function _renderCardBar(bar) {
         ${campanhaHtml}
       </div>
       <div class="bar-card__actions">
-        <button class="bar-card__fav" onclick="event.stopPropagation(); this.classList.toggle('active')" aria-label="Favoritar">
+        <button class="bar-card__fav" onclick="event.stopPropagation(); this.classList.add('animating'); this.classList.toggle('active'); setTimeout(()=>this.classList.remove('animating'),220)" aria-label="Favoritar">
           <svg class="fav-icon-empty" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
           </svg>
