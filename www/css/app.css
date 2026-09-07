@@ -1716,9 +1716,19 @@ html, body {
 }
 
 .rota-opcao__icon {
-  font-size: 1.3rem;
   width: 28px;
-  text-align: center;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rota-opcao__icon img,
+.rota-opcao__icon svg {
+  width: 28px;
+  height: 28px;
+  display: block;
 }
 
 .rota-opcao__label {
