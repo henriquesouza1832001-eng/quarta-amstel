@@ -369,6 +369,8 @@ html, body {
   z-index: 200;
   display: flex;
   flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--surface);
 }
 
 .bottom-nav {
@@ -667,19 +669,12 @@ html, body {
 .bar-card__placeholder {
   width: 100%;
   height: 100%;
-  background-color: var(--amstel-cream);
-  background-image:
-    repeating-linear-gradient(
-      -45deg,
-      transparent,
-      transparent 12px,
-      rgba(207,0,28,0.06) 12px,
-      rgba(207,0,28,0.06) 13px
-    ),
-    url('/logos/Logo-256.png');
-  background-size: auto, 32px 32px;
-  background-repeat: repeat, repeat;
-  background-position: 0 0, 4px 4px;
+  background-color: #C8102E;
+  background-image: url('/logos/Logo-256.png');
+  background-size: 48px 48px;
+  background-repeat: repeat;
+  background-position: 0 0;
+  opacity: 0.92;
 }
 
 .bar-card__body {
