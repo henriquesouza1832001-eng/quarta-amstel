@@ -431,23 +431,41 @@
     </div>
 
     <div class="field">
-      <label>Bar</label>
-      <select id="c-bar" class="filter-select" style="width:100%">
-        <option value="">Carregando bares...</option>
-      </select>
-    </div>
+  <label>Abrangência *</label>
+  <select
+    id="c-abrangencia"
+    class="filter-select"
+    style="width:100%"
+    onchange="_campanhaAbrangenciaMudou()"
+  >
+    <option value="nacional">Todos os bares</option>
+    <option value="estado">Por estado</option>
+    <option value="cidade">Por cidade</option>
+  </select>
+</div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field">
-        <label>Cidade</label>
-        <input id="c-cidade" placeholder="Belo Horizonte">
-      </div>
+<div id="c-bloco-estado" class="field hidden">
+  <label>Estado *</label>
+  <select
+    id="c-estado"
+    class="filter-select"
+    style="width:100%"
+    onchange="_campanhaEstadoMudou()"
+  >
+    <option value="">Selecione o estado</option>
+  </select>
+</div>
 
-      <div class="field">
-        <label>Estado</label>
-        <input id="c-estado" maxlength="2" placeholder="MG">
-      </div>
-    </div>
+<div id="c-bloco-cidade" class="field hidden">
+  <label>Cidade *</label>
+  <select
+    id="c-cidade"
+    class="filter-select"
+    style="width:100%"
+  >
+    <option value="">Selecione a cidade</option>
+  </select>
+</div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="field">
@@ -932,9 +950,10 @@ async function _carregarCampanhas() {
   `).join('');
 }
 
+let _campanhaBares = [];
+
 async function _abrirModalCampanha() {
   const modal = document.getElementById('modal-campanha');
-  const select = document.getElementById('c-bar');
   const result = document.getElementById('campanha-result');
 
   result.classList.add('hidden');
@@ -943,51 +962,232 @@ async function _abrirModalCampanha() {
   document.getElementById('c-titulo').value = '';
   document.getElementById('c-promocao').value = '';
   document.getElementById('c-descricao').value = '';
-  document.getElementById('c-cidade').value = '';
-  document.getElementById('c-estado').value = '';
+
+  document.getElementById('c-abrangencia').value = 'nacional';
 
   const hoje = new Date().toISOString().split('T')[0];
-
   document.getElementById('c-inicio').value = hoje;
   document.getElementById('c-fim').value = hoje;
 
-  select.innerHTML = '<option value="">Todos / campanha regional</option>';
+  _campanhaBares = [];
 
   const data = await _api('/admin/bares');
 
   if (data?.ok && Array.isArray(data.bares)) {
-    data.bares.forEach(bar => {
-      const option = document.createElement('option');
-
-      option.value = bar.id;
-      option.textContent =
-        `${bar.nome} — ${bar.cidade || ''}/${bar.estado || ''}`;
-
-      option.dataset.cidade = bar.cidade || '';
-      option.dataset.estado = bar.estado || '';
-
-      select.appendChild(option);
-    });
+    _campanhaBares = data.bares;
   }
 
-  select.onchange = function () {
-    const option = this.options[this.selectedIndex];
-
-    if (this.value && option) {
-      document.getElementById('c-cidade').value =
-        option.dataset.cidade || '';
-
-      document.getElementById('c-estado').value =
-        option.dataset.estado || '';
-    }
-  };
+  _preencherEstadosCampanha();
+  _campanhaAbrangenciaMudou();
 
   modal.classList.remove('hidden');
 }
 
+function _preencherEstadosCampanha() {
+  const select = document.getElementById('c-estado');
+
+  const estados = [...new Set(
+    _campanhaBares
+      .map(b => String(b.estado || '').trim().toUpperCase())
+      .filter(Boolean)
+  )].sort();
+
+  select.innerHTML =
+    '<option value="">Selecione o estado</option>';
+
+  estados.forEach(uf => {
+    const option = document.createElement('option');
+    option.value = uf;
+    option.textContent = uf;
+    select.appendChild(option);
+  });
+}
+
+function _campanhaAbrangenciaMudou() {
+  const abrangencia =
+    document.getElementById('c-abrangencia').value;
+
+  const blocoEstado =
+    document.getElementById('c-bloco-estado');
+
+  const blocoCidade =
+    document.getElementById('c-bloco-cidade');
+
+  blocoEstado.classList.toggle(
+    'hidden',
+    abrangencia === 'nacional'
+  );
+
+  blocoCidade.classList.toggle(
+    'hidden',
+    abrangencia !== 'cidade'
+  );
+
+  if (abrangencia === 'nacional') {
+    document.getElementById('c-estado').value = '';
+    document.getElementById('c-cidade').innerHTML =
+      '<option value="">Selecione a cidade</option>';
+  }
+
+  if (abrangencia === 'estado') {
+    document.getElementById('c-cidade').innerHTML =
+      '<option value="">Selecione a cidade</option>';
+  }
+}
+
+function _campanhaEstadoMudou() {
+  const estado =
+    document.getElementById('c-estado').value;
+
+  const cidadeSelect =
+    document.getElementById('c-cidade');
+
+  cidadeSelect.innerHTML =
+    '<option value="">Selecione a cidade</option>';
+
+  if (!estado) return;
+
+  const cidades = [...new Set(
+    _campanhaBares
+      .filter(b =>
+        String(b.estado || '').trim().toUpperCase() === estado
+      )
+      .map(b => String(b.cidade || '').trim())
+      .filter(Boolean)
+  )].sort((a, b) =>
+    a.localeCompare(b, 'pt-BR')
+  );
+
+  cidades.forEach(cidade => {
+    const option = document.createElement('option');
+    option.value = cidade;
+    option.textContent = cidade;
+    cidadeSelect.appendChild(option);
+  });
+}
+
 function _fecharModalCampanha() {
-  document.getElementById('modal-campanha')
+  document
+    .getElementById('modal-campanha')
     .classList.add('hidden');
+}
+
+async function _salvarCampanha() {
+  const titulo =
+    document.getElementById('c-titulo').value.trim();
+
+  const promocao =
+    document.getElementById('c-promocao').value.trim();
+
+  const descricao =
+    document.getElementById('c-descricao').value.trim();
+
+  const abrangencia =
+    document.getElementById('c-abrangencia').value;
+
+  const estado =
+    document.getElementById('c-estado').value;
+
+  const cidade =
+    document.getElementById('c-cidade').value;
+
+  const inicio =
+    document.getElementById('c-inicio').value;
+
+  const fim =
+    document.getElementById('c-fim').value;
+
+  const result =
+    document.getElementById('campanha-result');
+
+  const btn =
+    document.getElementById('btn-salvar-campanha');
+
+  result.classList.remove('hidden');
+
+  if (!titulo || !promocao || !inicio || !fim) {
+    result.textContent =
+      '❌ Preencha título, promoção, início e fim.';
+    return;
+  }
+
+  if (
+    abrangencia === 'estado' &&
+    !estado
+  ) {
+    result.textContent =
+      '❌ Selecione o estado.';
+    return;
+  }
+
+  if (
+    abrangencia === 'cidade' &&
+    (!estado || !cidade)
+  ) {
+    result.textContent =
+      '❌ Selecione o estado e a cidade.';
+    return;
+  }
+
+  if (fim < inicio) {
+    result.textContent =
+      '❌ A data final não pode ser anterior à inicial.';
+    return;
+  }
+
+  let cidadeEnvio = null;
+  let estadoEnvio = null;
+
+  if (abrangencia === 'estado') {
+    estadoEnvio = estado;
+  }
+
+  if (abrangencia === 'cidade') {
+    estadoEnvio = estado;
+    cidadeEnvio = cidade;
+  }
+
+  btn.disabled = true;
+  result.textContent = 'Salvando...';
+
+  try {
+    const data = await _api('/admin/campanhas', {
+      method: 'POST',
+      body: JSON.stringify({
+        titulo,
+        promocao,
+        descricao: descricao || null,
+        abrangencia,
+        cidade: cidadeEnvio,
+        estado: estadoEnvio,
+        bar_id: null,
+        inicio,
+        fim
+      })
+    });
+
+    if (!data?.ok) {
+      result.textContent =
+        `❌ ${data?.erro || 'Erro ao criar campanha'}`;
+      return;
+    }
+
+    result.textContent =
+      '✅ Campanha criada com sucesso.';
+
+    await _carregarCampanhas();
+
+    setTimeout(() => {
+      _fecharModalCampanha();
+    }, 500);
+
+  } catch (e) {
+    console.error('[Campanha]', e);
+    result.textContent =
+      '❌ Erro ao criar campanha.';
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function _salvarCampanha() {
