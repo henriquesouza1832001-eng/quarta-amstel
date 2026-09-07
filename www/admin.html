@@ -174,11 +174,51 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
       Campanhas
     </div>
-    <div class="nav-item" onclick="_nav('seguranca')">
+    <div class="nav-item hidden" id="nav-seguranca" onclick="_nav('seguranca')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+     <th>Status</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+
+      <tbody id="admins-tbody">
+        <tr>
+          <td
+            colspan="7"
+            style="
+              text-align:center;
+              color:var(--text3);
+            "
+          >
+            Carregando...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
       Segurança
     </div>
-    <div class="nav-item" onclick="_nav('config')">
+    <div
+  class="nav-item hidden"
+  id="nav-admins"
+  onclick="_nav('admins')"
+>
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+  >
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M19 8v6M22 11h-6"/>
+  </svg>
+  Administradores
+</div>
+    <div class="nav-item hidden" id="nav-config" onclick="_nav('config')">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M20 12h2M2 12h2M12 20v2M12 2v2"/></svg>
       Configurações
     </div>
@@ -204,7 +244,10 @@
         <div class="stat-card"><div class="stat-card__val" id="st-subs">—</div><div class="stat-card__label">Subscriptions push</div></div>
         <div class="stat-card"><div class="stat-card__val" id="st-camp">—</div><div class="stat-card__label">Campanhas ativas</div></div>
         <div class="stat-card"><div class="stat-card__val" id="st-push">—</div><div class="stat-card__label">Push enviados</div></div>
-        <div class="stat-card" style="border-color:rgba(200,16,46,.3)"><div class="stat-card__val" style="color:var(--red)" id="st-ameacas">—</div><div class="stat-card__label">Ameaças (24h)</div></div>
+        <div class="stat-card hidden" id="stat-ameacas-card" style="border-color:rgba(200,16,46,.3)">
+  <div class="stat-card__val" style="color:var(--red)" id="st-ameacas">—</div>
+  <div class="stat-card__label">Ameaças (24h)</div>
+</div>
       </div>
       <p style="font-size:.8rem;color:var(--text3);margin-top:8px">Próximo push automático: toda quarta às 17h, 18h e 19h (horário de Brasília)</p>
     </div>
@@ -465,9 +508,38 @@ function _autenticar(data) {
   document.getElementById('login-view').classList.add('hidden');
   document.getElementById('admin-view').classList.remove('hidden');
   document.getElementById('admin-nome-sidebar').textContent = data.admin.nome;
+_aplicarPermissoesUI();
   document.getElementById('dash-data').textContent = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   _carregarStats();
   _carregarBares();
+}
+function _aplicarPermissoesUI() {
+  const admin = _adminData || {};
+
+  const navSeguranca = document.getElementById('nav-seguranca');
+  const cardAmeacas = document.getElementById('stat-ameacas-card');
+  const navAdmins = document.getElementById('nav-admins');
+  const navConfig = document.getElementById('nav-config');
+
+  if (Number(admin.can_security) === 1) {
+    navSeguranca?.classList.remove('hidden');
+    cardAmeacas?.classList.remove('hidden');
+  } else {
+    navSeguranca?.classList.add('hidden');
+    cardAmeacas?.classList.add('hidden');
+  }
+
+  if (Number(admin.can_manage_admins) === 1) {
+    navAdmins?.classList.remove('hidden');
+  } else {
+    navAdmins?.classList.add('hidden');
+  }
+
+  if (admin.role === 'master') {
+    navConfig?.classList.remove('hidden');
+  } else {
+    navConfig?.classList.add('hidden');
+  }
 }
 
 function _erroLogin(msg) {
@@ -550,6 +622,7 @@ function _nav(page) {
   if (page === 'campanhas') _carregarCampanhas();
   if (page === 'seguranca') _carregarSec();
   if (page === 'config') _carregarConfig();
+  if (page === 'admins') _carregarAdmins();
 }
 
 async function _carregarStats() {
@@ -561,7 +634,13 @@ async function _carregarStats() {
   document.getElementById('st-subs').textContent = s.subscriptions?.total || 0;
   document.getElementById('st-camp').textContent = s.campanhas?.total || 0;
   document.getElementById('st-push').textContent = s.pushes_enviados || 0;
-  document.getElementById('st-ameacas').textContent = s.ameacas_24h || 0;
+  if (
+  Number(_adminData?.can_security) === 1 &&
+  s.ameacas_24h !== undefined
+) {
+  document.getElementById('st-ameacas').textContent =
+    s.ameacas_24h || 0;
+}
 }
 
 let _baresAdmin = [];
@@ -800,6 +879,164 @@ async function _processarImport(input) {
   _carregarBares();
 }
 
+async function _carregarAdmins() {
+  const data = await _api('/admin/admins');
+
+  if (!data?.ok) return;
+
+  const tbody =
+    document.getElementById('admins-tbody');
+
+  if (!data.admins?.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td
+          colspan="7"
+          style="text-align:center;color:var(--text3)"
+        >
+          Nenhum administrador regional cadastrado
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = data.admins.map(a => `
+    <tr>
+      <td><strong>${_esc(a.nome)}</strong></td>
+
+      <td>
+        ${_esc(a.email)}
+      </td>
+
+      <td>
+        ${
+          a.role === 'viewer'
+            ? 'Visualização'
+            : 'Administrador'
+        }
+      </td>
+
+      <td>
+        ${
+          a.cidade
+            ? `${_esc(a.cidade)} / ${_esc(a.estado)}`
+            : `${_esc(a.estado)} inteiro`
+        }
+      </td>
+
+      <td>
+        ${
+          a.totp_ativo
+            ? '<span class="badge badge-ok">Ativo</span>'
+            : '<span class="badge badge-pend">Não configurado</span>'
+        }
+      </td>
+
+      <td>
+        ${
+          a.ativo
+            ? '<span class="badge badge-ok">Ativo</span>'
+            : '<span class="badge badge-off">Inativo</span>'
+        }
+      </td>
+
+      <td>
+        <button
+          class="btn-sm ${a.ativo ? 'btn-sm-r' : 'btn-sm-green'}"
+          onclick="_alterarStatusAdmin('${a.id}', ${a.ativo ? 0 : 1})"
+        >
+          ${a.ativo ? 'Desativar' : 'Ativar'}
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function _criarAdmin() {
+  const result =
+    document.getElementById('adm-result');
+
+  result.classList.remove('hidden');
+  result.textContent = 'Criando administrador...';
+
+  const body = {
+    nome:
+      document.getElementById('adm-nome').value.trim(),
+
+    email:
+      document.getElementById('adm-email').value.trim(),
+
+    senha:
+      document.getElementById('adm-senha').value,
+
+    estado:
+      document
+        .getElementById('adm-estado')
+        .value
+        .trim()
+        .toUpperCase(),
+
+    cidade:
+      document.getElementById('adm-cidade').value.trim(),
+
+    role:
+      document.getElementById('adm-role').value
+  };
+
+  const data = await _api('/admin/admins', {
+    method: 'POST',
+    body: JSON.stringify(body)
+  });
+
+  if (!data?.ok) {
+    result.textContent =
+      `❌ ${data?.erro || 'Erro ao criar administrador'}`;
+    return;
+  }
+
+  result.textContent =
+    '✅ Administrador criado com sucesso.';
+
+  document.getElementById('adm-nome').value = '';
+  document.getElementById('adm-email').value = '';
+  document.getElementById('adm-senha').value = '';
+  document.getElementById('adm-cidade').value = '';
+
+  await _carregarAdmins();
+}
+
+async function _alterarStatusAdmin(id, ativo) {
+  const acao = ativo
+    ? 'reativar'
+    : 'desativar';
+
+  if (
+    !confirm(
+      `Deseja realmente ${acao} este administrador?`
+    )
+  ) {
+    return;
+  }
+
+  const data = await _api(
+    `/admin/admins/${id}/status`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ ativo })
+    }
+  );
+
+  if (!data?.ok) {
+    alert(
+      data?.erro ||
+      'Não foi possível alterar o administrador.'
+    );
+    return;
+  }
+
+  await _carregarAdmins();
+}
 async function _carregarSec() {
   _carregarLogs(1);
   const blocked = await _api('/admin/security/blocked');

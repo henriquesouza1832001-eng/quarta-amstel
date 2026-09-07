@@ -228,7 +228,9 @@ async function requireAuth(request, env, roles = ['master', 'admin', 'viewer']) 
   if (!roles.includes(payload.role)) return null;
   return payload;
 }
-
+function temPermissao(admin, permissao) {
+  return Number(admin?.[permissao] || 0) === 1;
+}
 function adminPodeGerenciarLocal(admin, cidade, estado) {
   if (!admin) return false;
 
@@ -255,7 +257,35 @@ function adminPodeGerenciarLocal(admin, cidade, estado) {
 
   return false;
 }
+function adminScopeWhere(admin, alias = '') {
+  const prefix = alias ? `${alias}.` : '';
 
+  if (Number(admin?.can_manage_all_regions || 0) === 1) {
+    return {
+      sql: '1=1',
+      params: []
+    };
+  }
+
+  if (admin?.cidade && admin?.estado) {
+    return {
+      sql: `${prefix}cidade = ? AND ${prefix}estado = ?`,
+      params: [admin.cidade, admin.estado]
+    };
+  }
+
+  if (admin?.estado) {
+    return {
+      sql: `${prefix}estado = ?`,
+      params: [admin.estado]
+    };
+  }
+
+  return {
+    sql: '1=0',
+    params: []
+  };
+}
 async function hashPassword(password) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
@@ -508,7 +538,16 @@ router.post('/admin/login', async (request, env) => {
     }
   }
 
-  const token = await signJWT({ id: admin.id, email: admin.email, role: admin.role, cidade: admin.cidade, estado: admin.estado }, env.JWT_SECRET);
+  const token = await signJWT({
+  id: admin.id,
+  email: admin.email,
+  role: admin.role,
+  cidade: admin.cidade,
+  estado: admin.estado,
+  can_security: Number(admin.can_security || 0),
+  can_manage_admins: Number(admin.can_manage_admins || 0),
+  can_manage_all_regions: Number(admin.can_manage_all_regions || 0)
+}, env.JWT_SECRET);
 
   await db.prepare(`
     UPDATE admins
@@ -519,12 +558,17 @@ router.post('/admin/login', async (request, env) => {
   return json({
     ok: true,
     token,
-    admin: {
-      id: admin.id,
-      nome: admin.nome,
-      email: admin.email,
-      role: admin.role
-    }
+ admin: {
+  id: admin.id,
+  nome: admin.nome,
+  email: admin.email,
+  role: admin.role,
+  cidade: admin.cidade,
+  estado: admin.estado,
+  can_security: Number(admin.can_security || 0),
+  can_manage_admins: Number(admin.can_manage_admins || 0),
+  can_manage_all_regions: Number(admin.can_manage_all_regions || 0)
+}
   });
 });
 
@@ -557,6 +601,218 @@ router.post('/admin/totp/confirm', async (request, env) => {
   await db.prepare(`UPDATE admins SET totp_ativo = 1 WHERE id = ?`).bind(adminAuth.id).run();
   return json({ ok: true, mensagem: '2FA ativado com sucesso' });
 });
+router.get('/admin/admins', async (request, env) => {
+  const admin = await requireAuth(request, env);
+
+  if (!admin) {
+    return err('Não autorizado', 401);
+  }
+
+  if (!temPermissao(admin, 'can_manage_admins')) {
+    return err('Sem permissão para gerenciar administradores', 403);
+  }
+
+  const db = env.DB;
+
+  const { results } = await db.prepare(`
+    SELECT
+      id,
+      nome,
+      email,
+      role,
+      cidade,
+      estado,
+      ativo,
+      totp_ativo,
+      ultimo_login,
+      criado_em
+    FROM admins
+    WHERE role != 'master'
+    ORDER BY ativo DESC, nome ASC
+  `).all();
+
+  return json({
+    ok: true,
+    admins: results
+  });
+});
+
+router.post('/admin/admins', async (request, env) => {
+  const admin = await requireAuth(request, env);
+
+  if (!admin) {
+    return err('Não autorizado', 401);
+  }
+
+  if (!temPermissao(admin, 'can_manage_admins')) {
+    return err('Sem permissão para criar administradores', 403);
+  }
+
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return err('JSON inválido', 400);
+  }
+
+  const {
+    nome,
+    email,
+    senha,
+    cidade,
+    estado,
+    role = 'admin'
+  } = body;
+
+  if (!nome || !email || !senha || !estado) {
+    return err(
+      'Nome, email, senha e estado são obrigatórios',
+      400
+    );
+  }
+
+  if (!['admin', 'viewer'].includes(role)) {
+    return err(
+      'O painel Amstel não pode criar usuários Master.',
+      403
+    );
+  }
+
+  if (String(senha).length < 12) {
+    return err(
+      'A senha inicial deve possuir pelo menos 12 caracteres.',
+      400
+    );
+  }
+
+  const estadoNormalizado =
+    String(estado).trim().toUpperCase();
+
+  const cidadeNormalizada =
+    cidade ? String(cidade).trim() : null;
+
+  if (!/^[A-Z]{2}$/.test(estadoNormalizado)) {
+    return err('Estado inválido', 400);
+  }
+
+  if (
+    Number(admin.can_manage_all_regions || 0) !== 1 &&
+    !adminPodeGerenciarLocal(
+      admin,
+      cidadeNormalizada || '',
+      estadoNormalizado
+    )
+  ) {
+    return err(
+      'Você não pode criar administrador fora da sua região.',
+      403
+    );
+  }
+
+  const db = env.DB;
+
+  const emailNormalizado =
+    String(email).trim().toLowerCase();
+
+  const existente = await db.prepare(`
+    SELECT id
+    FROM admins
+    WHERE email = ?
+  `).bind(emailNormalizado).first();
+
+  if (existente) {
+    return err(
+      'Já existe um administrador com este email.',
+      409
+    );
+  }
+
+  const senhaHash = await hashPassword(senha);
+
+  const result = await db.prepare(`
+    INSERT INTO admins (
+      nome,
+      email,
+      senha_hash,
+      role,
+      cidade,
+      estado,
+      can_security,
+      can_manage_admins,
+      can_manage_all_regions,
+      ativo
+    )
+    VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 1)
+  `).bind(
+    String(nome).trim(),
+    emailNormalizado,
+    senhaHash,
+    role,
+    cidadeNormalizada,
+    estadoNormalizado
+  ).run();
+
+  return json({
+    ok: true,
+    id: result.meta?.last_row_id
+  }, 201);
+});
+
+router.put('/admin/admins/:id/status', async (request, env) => {
+  const admin = await requireAuth(request, env);
+
+  if (!admin) {
+    return err('Não autorizado', 401);
+  }
+
+  if (!temPermissao(admin, 'can_manage_admins')) {
+    return err('Sem permissão', 403);
+  }
+
+  const { id } = request.params;
+
+  if (!/^[a-f0-9]{16}$/.test(id)) {
+    return err('ID inválido', 400);
+  }
+
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return err('JSON inválido', 400);
+  }
+
+  const ativo = Number(body.ativo) === 1 ? 1 : 0;
+
+  const db = env.DB;
+
+  const alvo = await db.prepare(`
+    SELECT id, role
+    FROM admins
+    WHERE id = ?
+  `).bind(id).first();
+
+  if (!alvo) {
+    return err('Administrador não encontrado', 404);
+  }
+
+  if (alvo.role === 'master') {
+    return err(
+      'Contas Master só podem ser gerenciadas pelo MGL.',
+      403
+    );
+  }
+
+  await db.prepare(`
+    UPDATE admins
+    SET ativo = ?
+    WHERE id = ?
+  `).bind(ativo, id).run();
+
+  return json({ ok: true });
+});
 
 router.get('/admin/bares', async (request, env) => {
   const admin = await requireAuth(request, env, ['master', 'admin', 'viewer']);
@@ -571,8 +827,17 @@ router.get('/admin/bares', async (request, env) => {
   let query = `SELECT * FROM bares WHERE 1=1`;
   const params = [];
 
-  if (admin.cidade) { query += ` AND cidade = ?`; params.push(admin.cidade); }
-  else if (admin.estado && admin.role !== 'master') { query += ` AND estado = ?`; params.push(admin.estado); }
+  if (Number(admin.can_manage_all_regions || 0) !== 1) {
+  if (admin.cidade && admin.estado) {
+    query += ` AND cidade = ? AND estado = ?`;
+    params.push(admin.cidade, admin.estado);
+  } else if (admin.estado) {
+    query += ` AND estado = ?`;
+    params.push(admin.estado);
+  } else {
+    query += ` AND 1 = 0`;
+  }
+}
 
   if (aprovado !== null && aprovado !== undefined) { query += ` AND aprovado = ?`; params.push(parseInt(aprovado)); }
   if (cidade) { query += ` AND cidade = ?`; params.push(cidade); }
@@ -774,9 +1039,66 @@ router.get('/admin/campanhas', async (request, env) => {
   if (!admin) return err('Não autorizado', 401);
 
   const db = env.DB;
-  const { results } = await db.prepare(`SELECT c.*, b.nome as bar_nome FROM campanhas c LEFT JOIN bares b ON c.bar_id = b.id ORDER BY c.criado_em DESC`).all();
-  return json({ ok: true, campanhas: results });
+
+  let query = `
+    SELECT
+      c.*,
+      b.nome AS bar_nome
+    FROM campanhas c
+    LEFT JOIN bares b ON c.bar_id = b.id
+    WHERE 1=1
+  `;
+
+  const params = [];
+
+  if (Number(admin.can_manage_all_regions || 0) !== 1) {
+    if (admin.cidade && admin.estado) {
+      query += `
+        AND (
+          (c.cidade = ? AND c.estado = ?)
+          OR
+          (b.cidade = ? AND b.estado = ?)
+          OR
+          (c.cidade IS NULL AND c.estado IS NULL AND c.bar_id IS NULL)
+        )
+      `;
+
+      params.push(
+        admin.cidade,
+        admin.estado,
+        admin.cidade,
+        admin.estado
+      );
+
+    } else if (admin.estado) {
+      query += `
+        AND (
+          c.estado = ?
+          OR b.estado = ?
+          OR (c.estado IS NULL AND c.bar_id IS NULL)
+        )
+      `;
+
+      params.push(admin.estado, admin.estado);
+
+    } else {
+      query += ` AND 1 = 0`;
+    }
+  }
+
+  query += ` ORDER BY c.criado_em DESC`;
+
+  const { results } = await db
+    .prepare(query)
+    .bind(...params)
+    .all();
+
+  return json({
+    ok: true,
+    campanhas: results
+  });
 });
+
 
 router.post('/admin/campanhas', async (request, env) => {
   const admin = await requireAuth(request, env, ['master', 'admin']);
@@ -805,6 +1127,29 @@ router.post('/admin/push/send', async (request, env) => {
   try { body = await request.json(); } catch { return err('JSON inválido'); }
 
   const { titulo, mensagem, cidade, estado, campanha_id, confirmacao } = body;
+  let cidadeEfetiva = cidade ? String(cidade).trim() : null;
+let estadoEfetivo = estado ? String(estado).trim().toUpperCase() : null;
+
+if (Number(admin.can_manage_all_regions || 0) !== 1) {
+  if (admin.cidade) {
+    cidadeEfetiva = admin.cidade;
+  }
+
+  if (admin.estado) {
+    estadoEfetivo = admin.estado;
+  }
+}
+
+if (
+  Number(admin.can_manage_all_regions || 0) !== 1 &&
+  !adminPodeGerenciarLocal(
+    admin,
+    cidadeEfetiva || '',
+    estadoEfetivo || ''
+  )
+) {
+  return err('Você não pode enviar push para esta região.', 403);
+}
 
   if (confirmacao !== 'CONFIRMAR') return err('Digite CONFIRMAR para enviar push');
   if (!titulo || !mensagem) return err('Título e mensagem obrigatórios');
@@ -817,8 +1162,15 @@ router.post('/admin/push/send', async (request, env) => {
 
   let query = `SELECT id, endpoint, p256dh, auth_key FROM push_subscriptions WHERE ativo = 1`;
   const params = [];
-  if (cidade) { query += ` AND cidade = ?`; params.push(cidade); }
-  if (estado) { query += ` AND estado = ?`; params.push(estado); }
+if (cidadeEfetiva) {
+  query += ` AND cidade = ?`;
+  params.push(cidadeEfetiva);
+}
+
+if (estadoEfetivo) {
+  query += ` AND estado = ?`;
+  params.push(estadoEfetivo);
+}
 
   const { results: subs } = await db.prepare(query).bind(...params).all();
 
@@ -853,14 +1205,21 @@ router.post('/admin/push/send', async (request, env) => {
   await db.prepare(`
     INSERT INTO push_log (campanha_id, enviado_por, cidade, estado, total, enviados, falhas, tipo)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'manual')
-  `).bind(campanha_id || null, admin.id, cidade || null, estado || null, subs.length, enviados, falhas).run();
+  `).bind(campanha_id || null, admin.id, cidadeEfetiva || null, estadoEfetivo || null, subs.length, enviados, falhas).run();
 
   return json({ ok: true, total: subs.length, enviados, falhas });
 });
 
 router.get('/admin/security/logs', async (request, env) => {
-  const admin = await requireAuth(request, env, ['master']);
-  if (!admin) return err('Não autorizado', 401);
+  const admin = await requireAuth(request, env);
+
+  if (!admin) {
+    return err('Não autorizado', 401);
+  }
+
+  if (!temPermissao(admin, 'can_security')) {
+    return err('Sem permissão para acessar Segurança', 403);
+  }
 
   const db = env.DB;
   const url = new URL(request.url);
@@ -878,8 +1237,15 @@ router.get('/admin/security/logs', async (request, env) => {
 });
 
 router.get('/admin/security/blocked', async (request, env) => {
-  const admin = await requireAuth(request, env, ['master']);
-  if (!admin) return err('Não autorizado', 401);
+  const admin = await requireAuth(request, env);
+
+  if (!admin) {
+    return err('Não autorizado', 401);
+  }
+
+  if (!temPermissao(admin, 'can_security')) {
+    return err('Sem permissão para acessar Segurança', 403);
+  }
 
   const db = env.DB;
   const { results } = await db.prepare(`SELECT * FROM blocked_ips ORDER BY criado_em DESC`).all();
@@ -887,8 +1253,15 @@ router.get('/admin/security/blocked', async (request, env) => {
 });
 
 router.delete('/admin/security/blocked/:ip', async (request, env) => {
-  const admin = await requireAuth(request, env, ['master']);
-  if (!admin) return err('Não autorizado', 401);
+  const admin = await requireAuth(request, env);
+
+  if (!admin) {
+    return err('Não autorizado', 401);
+  }
+
+  if (!temPermissao(admin, 'can_security')) {
+    return err('Sem permissão para gerenciar Segurança', 403);
+  }
 
   const db = env.DB;
   await db.prepare(`DELETE FROM blocked_ips WHERE ip = ?`).bind(request.params.ip).run();
@@ -900,16 +1273,92 @@ router.get('/admin/stats', async (request, env) => {
   if (!admin) return err('Não autorizado', 401);
 
   const db = env.DB;
-  const [bares, subs, campanhas, pushes, ameacas] = await Promise.all([
-    db.prepare(`SELECT COUNT(*) as total, SUM(aprovado) as aprovados FROM bares`).first(),
-    db.prepare(`SELECT COUNT(*) as total FROM push_subscriptions WHERE ativo = 1`).first(),
-    db.prepare(`SELECT COUNT(*) as total FROM campanhas WHERE ativo = 1`).first(),
-    db.prepare(`SELECT SUM(enviados) as total FROM push_log`).first(),
-    db.prepare(`SELECT COUNT(*) as total FROM security_log WHERE nivel >= 2 AND criado_em > datetime('now', '-24 hours')`).first(),
-  ]);
+
+  const scopeBares = adminScopeWhere(admin);
+  const scopeSubs = adminScopeWhere(admin);
+  const scopePush = adminScopeWhere(admin);
+
+  const campanhasWhere =
+    Number(admin.can_manage_all_regions || 0) === 1
+      ? {
+          sql: '1=1',
+          params: []
+        }
+      : admin.cidade && admin.estado
+        ? {
+            sql: `(cidade = ? AND estado = ?) OR (cidade IS NULL AND estado IS NULL)`,
+            params: [admin.cidade, admin.estado]
+          }
+        : admin.estado
+          ? {
+              sql: `estado = ? OR estado IS NULL`,
+              params: [admin.estado]
+            }
+          : {
+              sql: '1=0',
+              params: []
+            };
+
+  const bares = await db.prepare(`
+    SELECT
+      COUNT(*) AS total,
+      SUM(aprovado) AS aprovados
+    FROM bares
+    WHERE ${scopeBares.sql}
+  `).bind(...scopeBares.params).first();
+
+  const subs = await db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM push_subscriptions
+    WHERE ativo = 1
+      AND ${scopeSubs.sql}
+  `).bind(...scopeSubs.params).first();
+
+  const campanhas = await db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM campanhas
+    WHERE ativo = 1
+      AND (${campanhasWhere.sql})
+  `).bind(...campanhasWhere.params).first();
+
+  const pushes = await db.prepare(`
+    SELECT COALESCE(SUM(enviados), 0) AS total
+    FROM push_log
+    WHERE ${scopePush.sql}
+  `).bind(...scopePush.params).first();
+
+  let ameacas24h;
+
+  if (temPermissao(admin, 'can_security')) {
+    const ameacas = await db.prepare(`
+      SELECT COUNT(*) AS total
+      FROM security_log
+      WHERE nivel >= 2
+        AND criado_em > datetime('now', '-24 hours')
+    `).first();
+
+    ameacas24h = ameacas?.total || 0;
+  }
+
+  const stats = {
+    bares,
+    subscriptions: subs,
+    campanhas,
+    pushes_enviados: pushes?.total || 0
+  };
+
+  if (temPermissao(admin, 'can_security')) {
+    stats.ameacas_24h = ameacas24h;
+  }
+
+  return json({
+    ok: true,
+    stats
+  });
+});
 
   return json({ ok: true, stats: { bares, subscriptions: subs, campanhas, pushes_enviados: pushes?.total || 0, ameacas_24h: ameacas?.total || 0 } });
-});
+
 
 router.get('/admin/config', async (request, env) => {
   const admin = await requireAuth(request, env, ['master']);

@@ -79,10 +79,15 @@ CREATE TABLE IF NOT EXISTS admins (
   email        TEXT NOT NULL UNIQUE,
   senha_hash   TEXT NOT NULL,  -- bcrypt custo 12
   nome         TEXT NOT NULL,
-  role         TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('master','admin','viewer')),
-  cidade       TEXT,           -- NULL = acesso nacional
-  estado       TEXT,
-  totp_secret  TEXT,           -- AES-256 encrypted
+role                   TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('master','admin','viewer')),
+cidade                 TEXT,
+estado                 TEXT,
+
+can_security            INTEGER NOT NULL DEFAULT 0,
+can_manage_admins       INTEGER NOT NULL DEFAULT 0,
+can_manage_all_regions  INTEGER NOT NULL DEFAULT 0,
+
+totp_secret             TEXT,
   totp_ativo   INTEGER NOT NULL DEFAULT 0,
   ultimo_login TEXT,
   ativo        INTEGER NOT NULL DEFAULT 1,
