@@ -393,23 +393,15 @@ function haversine(lat1, lng1, lat2, lng2) {
 }
 
 router.get('/health', () => json({ ok: true, ts: new Date().toISOString() }));
-
-router.get('/bares', async (request, env) => {
-  const ip = request.headers.get('CF-Connecting-IP') || '0.0.0.0';
+router.get('/bares', async (request, env, ctx) => {
   const db = env.DB;
-
-  const configRL = await db.prepare(`SELECT valor FROM config WHERE chave = 'rate_limit_api'`).first();
-  const limite = parseInt(configRL?.valor || '100');
-  if (!(await checkRateLimit(db, ip, '/bares', limite))) {
-    return err('Muitas requisições. Tente novamente em breve.', 429);
-  }
-
   const url = new URL(request.url);
+
   const lat = parseFloat(url.searchParams.get('lat') || '0');
   const lng = parseFloat(url.searchParams.get('lng') || '0');
   const search = url.searchParams.get('search')?.trim() || '';
-  const cidade = url.searchParams.get('cidade') || '';
-  const estado = url.searchParams.get('estado') || '';
+  const cidade = url.searchParams.get('cidade')?.trim() || '';
+  const estado = url.searchParams.get('estado')?.trim() || '';
 
   if (hasSQLInjection(search) || hasSQLInjection(cidade)) {
     return err('Parâmetros inválidos', 400);
@@ -431,39 +423,175 @@ router.get('/bares', async (request, env) => {
     }, 400);
   }
 
-  const configRaio = await db.prepare(`SELECT valor FROM config WHERE chave = 'raio_busca_km'`).first();
-  const raioKm = parseFloat(configRaio?.valor || '50');
+  const hoje = new Date().toISOString().split('T')[0];
 
-  let query = `SELECT * FROM bares WHERE ativo = 1 AND aprovado = 1`;
-  const params = [];
+  // Cache independente da localização do usuário.
+  // O catálogo muda pouco; distância e filtros continuam calculados por request.
+  const cache = caches.default;
 
-  if (search) {
-    query += ` AND (nome LIKE ? OR bairro LIKE ? OR endereco LIKE ?)`;
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  const cacheKey = new Request(
+    `https://cache.quarta-amstel.local/catalogo-bares?v=2&data=${hoje}`,
+    { method: 'GET' }
+  );
+
+  let catalogo;
+
+  const cached = await cache.match(cacheKey);
+
+  if (cached) {
+    catalogo = await cached.json();
+  } else {
+    const [
+      configRaioResult,
+      baresResult,
+      campanhasResult
+    ] = await db.batch([
+      db.prepare(`
+        SELECT valor
+        FROM config
+        WHERE chave = 'raio_busca_km'
+      `),
+
+      db.prepare(`
+        SELECT
+          b.*,
+          h.dia_semana AS h_dia_semana,
+          h.aberto AS h_aberto,
+          h.abertura AS h_abertura,
+          h.fechamento AS h_fechamento
+        FROM bares b
+        LEFT JOIN bar_horarios h
+          ON h.bar_id = b.id
+        WHERE b.ativo = 1
+          AND b.aprovado = 1
+        ORDER BY b.id, h.dia_semana
+      `),
+
+      db.prepare(`
+        SELECT
+          id,
+          titulo,
+          promocao,
+          descricao,
+          cidade,
+          estado,
+          bar_id,
+          inicio,
+          fim,
+          ativo,
+          criado_em
+        FROM campanhas
+        WHERE ativo = 1
+          AND status = 'publicada'
+          AND inicio <= ?
+          AND fim >= ?
+        ORDER BY criado_em DESC
+      `).bind(hoje, hoje)
+    ]);
+
+    const raioKm = parseFloat(
+      configRaioResult.results?.[0]?.valor || '50'
+    );
+
+    const linhas = baresResult.results || [];
+    const campanhas = campanhasResult.results || [];
+
+    const mapaBares = new Map();
+
+    for (const linha of linhas) {
+      if (!mapaBares.has(linha.id)) {
+        const bar = { ...linha };
+
+        delete bar.h_dia_semana;
+        delete bar.h_aberto;
+        delete bar.h_abertura;
+        delete bar.h_fechamento;
+
+        bar.horarios = [];
+
+        mapaBares.set(linha.id, bar);
+      }
+
+      if (
+        linha.h_dia_semana !== null &&
+        linha.h_dia_semana !== undefined
+      ) {
+        mapaBares.get(linha.id).horarios.push({
+          dia_semana: linha.h_dia_semana,
+          aberto: linha.h_aberto,
+          abertura: linha.h_abertura,
+          fechamento: linha.h_fechamento
+        });
+      }
+    }
+
+    catalogo = {
+      raioKm,
+      bares: [...mapaBares.values()],
+      campanhas
+    };
+
+    const respostaCache = new Response(
+      JSON.stringify(catalogo),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=30'
+        }
+      }
+    );
+
+    ctx.waitUntil(
+      cache.put(cacheKey, respostaCache)
+    );
   }
 
-  if (cidade) { query += ` AND cidade = ?`; params.push(cidade); }
-  if (estado) { query += ` AND estado = ?`; params.push(estado); }
+  const searchNorm = search.toLowerCase();
+  const cidadeNorm = cidade.toLowerCase();
+  const estadoNorm = estado.toUpperCase();
 
-  const { results } = await db.prepare(query).bind(...params).all();
-  for (const bar of results) {
-  const { results: horarios } = await db.prepare(`
-    SELECT dia_semana, aberto, abertura, fechamento
-    FROM bar_horarios
-    WHERE bar_id = ?
-    ORDER BY dia_semana
-  `).bind(bar.id).all();
+  let bares = catalogo.bares
+    .filter(b => {
+      if (
+        b.lat == null ||
+        b.lng == null ||
+        !Number.isFinite(Number(b.lat)) ||
+        !Number.isFinite(Number(b.lng))
+      ) {
+        return false;
+      }
 
-  bar.horarios = horarios || [];
-}
+      if (searchNorm) {
+        const texto = [
+          b.nome,
+          b.bairro,
+          b.endereco
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
 
-  let bares = results
-    .filter(b =>
-      b.lat != null &&
-      b.lng != null &&
-      Number.isFinite(Number(b.lat)) &&
-      Number.isFinite(Number(b.lng))
-    )
+        if (!texto.includes(searchNorm)) {
+          return false;
+        }
+      }
+
+      if (
+        cidadeNorm &&
+        String(b.cidade || '').trim().toLowerCase() !== cidadeNorm
+      ) {
+        return false;
+      }
+
+      if (
+        estadoNorm &&
+        String(b.estado || '').trim().toUpperCase() !== estadoNorm
+      ) {
+        return false;
+      }
+
+      return true;
+    })
     .map(b => ({
       ...b,
       distancia_km: haversine(
@@ -473,82 +601,82 @@ router.get('/bares', async (request, env) => {
         Number(b.lng)
       )
     }))
-    .filter(b => b.distancia_km <= raioKm)
+    .filter(b => b.distancia_km <= catalogo.raioKm)
     .sort((a, b) => a.distancia_km - b.distancia_km);
 
-  const hoje = new Date().toISOString().split('T')[0];
+  // Índices de campanha: evita .find() repetidamente para cada bar.
+  const campanhasPorBar = new Map();
+  const campanhasPorCidade = new Map();
+  const campanhasPorEstado = new Map();
 
-const { results: campanhas } = await db.prepare(`
-  SELECT
-    id,
-    titulo,
-    promocao,
-    descricao,
-    cidade,
-    estado,
-    bar_id,
-    inicio,
-    fim,
-    ativo,
-    criado_em
-  FROM campanhas
-  WHERE ativo = 1
-    AND status = 'publicada'
-    AND inicio <= ?
-    AND fim >= ?
-  ORDER BY criado_em DESC
-`).bind(hoje, hoje).all();
+  let campanhaNacional = null;
 
-function escolherCampanhaParaBar(bar) {
-  const especificaBar = campanhas.find(c =>
-    c.bar_id === bar.id
-  );
+  for (const c of catalogo.campanhas) {
+    if (c.bar_id) {
+      if (!campanhasPorBar.has(c.bar_id)) {
+        campanhasPorBar.set(c.bar_id, c);
+      }
+      continue;
+    }
 
-  if (especificaBar) {
-    return especificaBar;
+    if (c.cidade && c.estado) {
+      const chave =
+        `${String(c.cidade).trim().toLowerCase()}|` +
+        `${String(c.estado).trim().toUpperCase()}`;
+
+      if (!campanhasPorCidade.has(chave)) {
+        campanhasPorCidade.set(chave, c);
+      }
+
+      continue;
+    }
+
+    if (!c.cidade && c.estado) {
+      const chave = String(c.estado).trim().toUpperCase();
+
+      if (!campanhasPorEstado.has(chave)) {
+        campanhasPorEstado.set(chave, c);
+      }
+
+      continue;
+    }
+
+    if (
+      !c.bar_id &&
+      !c.cidade &&
+      !c.estado &&
+      !campanhaNacional
+    ) {
+      campanhaNacional = c;
+    }
   }
 
-  const porCidade = campanhas.find(c =>
-    !c.bar_id &&
-    c.cidade &&
-    c.estado &&
-    String(c.cidade).trim().toLowerCase() ===
-      String(bar.cidade || '').trim().toLowerCase() &&
-    String(c.estado).trim().toUpperCase() ===
-      String(bar.estado || '').trim().toUpperCase()
-  );
+  bares = bares.map(bar => {
+    const chaveCidade =
+      `${String(bar.cidade || '').trim().toLowerCase()}|` +
+      `${String(bar.estado || '').trim().toUpperCase()}`;
 
-  if (porCidade) {
-    return porCidade;
-  }
+    const chaveEstado =
+      String(bar.estado || '').trim().toUpperCase();
 
-  const porEstado = campanhas.find(c =>
-    !c.bar_id &&
-    !c.cidade &&
-    c.estado &&
-    String(c.estado).trim().toUpperCase() ===
-      String(bar.estado || '').trim().toUpperCase()
-  );
+    const campanha =
+      campanhasPorBar.get(bar.id) ||
+      campanhasPorCidade.get(chaveCidade) ||
+      campanhasPorEstado.get(chaveEstado) ||
+      campanhaNacional ||
+      null;
 
-  if (porEstado) {
-    return porEstado;
-  }
+    return {
+      ...bar,
+      campanha_ativa: campanha
+    };
+  });
 
-  const nacional = campanhas.find(c =>
-    !c.bar_id &&
-    !c.cidade &&
-    !c.estado
-  );
-
-  return nacional || null;
-}
-
-bares = bares.map(b => ({
-  ...b,
-  campanha_ativa: escolherCampanhaParaBar(b)
-}));
-
-  return json({ ok: true, total: bares.length, bares });
+  return json({
+    ok: true,
+    total: bares.length,
+    bares
+  });
 });
 
 router.get('/bares/:id', async (request, env) => {
