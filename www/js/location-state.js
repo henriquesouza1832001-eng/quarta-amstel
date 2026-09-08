@@ -97,7 +97,7 @@ window._iniciarGeolocalizacao = function () {
     },
 {
   enableHighAccuracy: false,
-  timeout: 800,
+  timeout: 8000,
   maximumAge: 600000
 }
   );
