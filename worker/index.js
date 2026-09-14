@@ -962,7 +962,7 @@ router.post('/admin/admins', async (request, env) => {
     senha,
     cidade,
     estado,
-    role = 'admin'
+    role = 'consulta'
   } = body;
 
   if (!nome || !email || !senha || !estado) {
@@ -1012,6 +1012,34 @@ router.post('/admin/admins', async (request, env) => {
 
   const db = env.DB;
 
+  const limiteUsuarios = 15;
+  const totalAtivos = await db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM admins
+    WHERE role != 'master' AND ativo = 1
+  `).first();
+
+  if (Number(totalAtivos?.total || 0) >= limiteUsuarios) {
+    return err(`Limite de ${limiteUsuarios} usuários ativos atingido.`, 409);
+  }
+
+  if (role === 'gestor') {
+    if (cargoNormalizado(admin) !== 'master') {
+      return err('Somente o Master pode criar a conta Gestor.', 403);
+    }
+
+    const gestorAtivo = await db.prepare(`
+      SELECT id
+      FROM admins
+      WHERE role = 'gestor' AND ativo = 1
+      LIMIT 1
+    `).first();
+
+    if (gestorAtivo) {
+      return err('Já existe um Gestor ativo. O sistema permite apenas um.', 409);
+    }
+  }
+
   const emailNormalizado =
     String(email).trim().toLowerCase();
 
@@ -1043,14 +1071,15 @@ router.post('/admin/admins', async (request, env) => {
       can_manage_all_regions,
       ativo
     )
-    VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 1)
+    VALUES (?, ?, ?, ?, ?, ?, 0, ?, 0, 1)
   `).bind(
     String(nome).trim(),
     emailNormalizado,
     senhaHash,
     role,
     cidadeNormalizada,
-    estadoNormalizado
+    estadoNormalizado,
+    role === 'gestor' ? 1 : 0
   ).run();
 
   return json({
@@ -1090,9 +1119,8 @@ router.put('/admin/admins/:id/status', async (request, env) => {
   const ativo = Number(body.ativo) === 1 ? 1 : 0;
 
   const db = env.DB;
-
   const alvo = await db.prepare(`
-    SELECT id, role
+    SELECT id, role, ativo
     FROM admins
     WHERE id = ?
   `).bind(id).first();
@@ -1107,6 +1135,33 @@ router.put('/admin/admins/:id/status', async (request, env) => {
       403
     );
   }
+
+  if (ativo === 1 && Number(alvo.ativo) !== 1) {
+    const limiteUsuarios = 15;
+    const totalAtivos = await db.prepare(`
+      SELECT COUNT(*) AS total
+      FROM admins
+      WHERE role != 'master' AND ativo = 1
+    `).first();
+
+    if (Number(totalAtivos?.total || 0) >= limiteUsuarios) {
+      return err(`Limite de ${limiteUsuarios} usuários ativos atingido.`, 409);
+    }
+
+    if (alvo.role === 'gestor') {
+      const outroGestor = await db.prepare(`
+        SELECT id
+        FROM admins
+        WHERE role = 'gestor' AND ativo = 1 AND id != ?
+        LIMIT 1
+      `).bind(id).first();
+
+      if (outroGestor) {
+        return err('Já existe um Gestor ativo. O sistema permite apenas um.', 409);
+      }
+    }
+  }
+
 
   await db.prepare(`
     UPDATE admins
@@ -1172,7 +1227,7 @@ async function salvarHorariosBar(db, barId, horarios) {
   }
 }
 router.get('/admin/bares', async (request, env) => {
-  const admin = await requireAuth(request, env, ['master', 'admin', 'viewer']);
+  const admin = await requireAuth(request, env);
   if (!admin) return err('Não autorizado', 401);
 
   const db = env.DB;
@@ -1183,18 +1238,6 @@ router.get('/admin/bares', async (request, env) => {
 
   let query = `SELECT * FROM bares WHERE 1=1`;
   const params = [];
-
-  if (Number(admin.can_manage_all_regions || 0) !== 1) {
-  if (admin.cidade && admin.estado) {
-    query += ` AND cidade = ? AND estado = ?`;
-    params.push(admin.cidade, admin.estado);
-  } else if (admin.estado) {
-    query += ` AND estado = ?`;
-    params.push(admin.estado);
-  } else {
-    query += ` AND 1 = 0`;
-  }
-}
 
   if (aprovado !== null && aprovado !== undefined) { query += ` AND aprovado = ?`; params.push(parseInt(aprovado)); }
   if (cidade) { query += ` AND cidade = ?`; params.push(cidade); }
@@ -1532,8 +1575,8 @@ router.post('/admin/bares/import', async (request, env) => {
   const admin = await requireAuth(request, env);
 if (!admin) return err('Não autorizado', 401);
 
-if (!podeCriarConteudo(admin)) {
-  return err('Seu perfil não pode importar bares.', 403);
+if (cargoNormalizado(admin) !== 'master') {
+  return err('Importação em massa disponível somente para o Master.', 403);
 }
 
   let body;
@@ -1593,41 +1636,6 @@ router.get('/admin/campanhas', async (request, env) => {
   `;
 
   const params = [];
-
-  if (Number(admin.can_manage_all_regions || 0) !== 1) {
-    if (admin.cidade && admin.estado) {
-      query += `
-        AND (
-          (c.cidade = ? AND c.estado = ?)
-          OR
-          (b.cidade = ? AND b.estado = ?)
-          OR
-          (c.cidade IS NULL AND c.estado IS NULL AND c.bar_id IS NULL)
-        )
-      `;
-
-      params.push(
-        admin.cidade,
-        admin.estado,
-        admin.cidade,
-        admin.estado
-      );
-
-    } else if (admin.estado) {
-      query += `
-        AND (
-          c.estado = ?
-          OR b.estado = ?
-          OR (c.estado IS NULL AND c.bar_id IS NULL)
-        )
-      `;
-
-      params.push(admin.estado, admin.estado);
-
-    } else {
-      query += ` AND 1 = 0`;
-    }
-  }
 
   query += ` ORDER BY c.criado_em DESC`;
 
@@ -2118,9 +2126,9 @@ router.post('/admin/push/send', async (request, env) => {
   const admin = await requireAuth(request, env);
 if (!admin) return err('Não autorizado', 401);
 
-if (!podePublicarConteudo(admin)) {
+if (cargoNormalizado(admin) !== 'master') {
   return err(
-    'Seu perfil não possui permissão para enviar notificações.',
+    'Envio manual de notificações disponível somente para o Master.',
     403
   );
 }
@@ -2130,36 +2138,30 @@ if (!podePublicarConteudo(admin)) {
 
   const { titulo, mensagem, cidade, estado, campanha_id, confirmacao } = body;
   let cidadeEfetiva = cidade ? String(cidade).trim() : null;
-let estadoEfetivo = estado ? String(estado).trim().toUpperCase() : null;
-
-if (Number(admin.can_manage_all_regions || 0) !== 1) {
-  if (admin.cidade) {
-    cidadeEfetiva = admin.cidade;
-  }
-
-  if (admin.estado) {
-    estadoEfetivo = admin.estado;
-  }
-}
-
-if (
-  Number(admin.can_manage_all_regions || 0) !== 1 &&
-  !adminPodeGerenciarLocal(
-    admin,
-    cidadeEfetiva || '',
-    estadoEfetivo || ''
-  )
-) {
-  return err('Você não pode enviar push para esta região.', 403);
-}
+  let estadoEfetivo = estado ? String(estado).trim().toUpperCase() : null;
 
   if (confirmacao !== 'CONFIRMAR') return err('Digite CONFIRMAR para enviar push');
   if (!titulo || !mensagem) return err('Título e mensagem obrigatórios');
 
   const db = env.DB;
 
-  if (!(await checkRateLimit(db, admin.id, '/admin/push/send', 3, 1440))) {
-    return err('Limite de 3 disparos por dia atingido', 429);
+  const limiteMensalConfig = await db.prepare(`
+    SELECT valor
+    FROM config
+    WHERE chave = 'push_manual_limite_mensal'
+  `).first();
+
+  const limiteMensal = Math.max(1, parseInt(limiteMensalConfig?.valor || '4', 10) || 4);
+
+  const usadosNoMes = await db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM push_log
+    WHERE tipo = 'manual'
+      AND strftime('%Y-%m', criado_em) = strftime('%Y-%m', 'now')
+  `).first();
+
+  if (Number(usadosNoMes?.total || 0) >= limiteMensal) {
+    return err(`Limite mensal de ${limiteMensal} disparos manuais atingido.`, 429);
   }
 
   let query = `SELECT id, endpoint, p256dh, auth_key FROM push_subscriptions WHERE ativo = 1`;
@@ -2219,7 +2221,7 @@ router.get('/admin/security/logs', async (request, env) => {
     return err('Não autorizado', 401);
   }
 
-  if (!temPermissao(admin, 'can_security')) {
+  if (cargoNormalizado(admin) !== 'master') {
     return err('Sem permissão para acessar Segurança', 403);
   }
 
@@ -2245,7 +2247,7 @@ router.get('/admin/security/blocked', async (request, env) => {
     return err('Não autorizado', 401);
   }
 
-  if (!temPermissao(admin, 'can_security')) {
+  if (cargoNormalizado(admin) !== 'master') {
     return err('Sem permissão para acessar Segurança', 403);
   }
 
@@ -2261,7 +2263,7 @@ router.delete('/admin/security/blocked/:ip', async (request, env) => {
     return err('Não autorizado', 401);
   }
 
-  if (!temPermissao(admin, 'can_security')) {
+  if (cargoNormalizado(admin) !== 'master') {
     return err('Sem permissão para gerenciar Segurança', 403);
   }
 
@@ -2331,7 +2333,7 @@ router.get('/admin/stats', async (request, env) => {
 
   let ameacas24h;
 
-  if (temPermissao(admin, 'can_security')) {
+  if (cargoNormalizado(admin) === 'master') {
     const ameacas = await db.prepare(`
       SELECT COUNT(*) AS total
       FROM security_log
@@ -2349,7 +2351,7 @@ router.get('/admin/stats', async (request, env) => {
     pushes_enviados: pushes?.total || 0
   };
 
-  if (temPermissao(admin, 'can_security')) {
+  if (cargoNormalizado(admin) === 'master') {
     stats.ameacas_24h = ameacas24h;
   }
 

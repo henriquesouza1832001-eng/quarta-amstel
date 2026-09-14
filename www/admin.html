@@ -911,9 +911,17 @@ function _aplicarPermissoesUI() {
   const btnNovaCampanha =
     document.getElementById('btn-nova-campanha');
 
+  const opcaoGestor =
+    document.querySelector('#adm-role option[value="gestor"]');
+
+  if (opcaoGestor) {
+    opcaoGestor.disabled = cargo !== 'master';
+    opcaoGestor.hidden = cargo !== 'master';
+  }
+
 
   // Segurança
-  if (Number(admin.can_security || 0) === 1) {
+  if (cargo === 'master') {
     navSeguranca?.classList.remove('hidden');
     cardAmeacas?.classList.remove('hidden');
   } else {
@@ -938,8 +946,8 @@ function _aplicarPermissoesUI() {
   }
 
 
-  // Push: Master / Gestor / Publicador
-  if (_podePublicarConteudo()) {
+  // Push
+  if (cargo === 'master') {
     navPush?.classList.remove('hidden');
   } else {
     navPush?.classList.add('hidden');
@@ -949,12 +957,16 @@ function _aplicarPermissoesUI() {
   // Criação de conteúdo
   if (_podeCriarConteudo()) {
     btnAdicionarBar?.classList.remove('hidden');
-    btnImportarBares?.classList.remove('hidden');
     btnNovaCampanha?.classList.remove('hidden');
   } else {
     btnAdicionarBar?.classList.add('hidden');
-    btnImportarBares?.classList.add('hidden');
     btnNovaCampanha?.classList.add('hidden');
+  }
+
+  if (cargo === 'master') {
+    btnImportarBares?.classList.remove('hidden');
+  } else {
+    btnImportarBares?.classList.add('hidden');
   }
 
 

@@ -5,8 +5,8 @@ compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]
 binding = "DB"
-database_name = "quartaamstel-db"
-database_id = "33325577-b8ec-4351-8096-8ea3ef511813"
+database_name = "amstel-prod"
+database_id = "d1e5662e-c071-45ca-a598-1092fe33dd03"
 
 # Cron: toda quarta às 17h, 18h e 19h (horário de Brasília = UTC-3)
 # 17h BRT = 20h UTC | 18h BRT = 21h UTC | 19h BRT = 22h UTC

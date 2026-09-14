@@ -1,6 +1,6 @@
 
-PRAGMA journal_mode=WAL;
-PRAGMA foreign_keys=ON;
+
+
 
 CREATE TABLE IF NOT EXISTS bares (
   id          TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS admins (
   email        TEXT NOT NULL UNIQUE,
   senha_hash   TEXT NOT NULL,  -- bcrypt custo 12
   nome         TEXT NOT NULL,
-role                   TEXT NOT NULL DEFAULT 'admin' CHECK(role IN ('master','admin','viewer')),
+role                   TEXT NOT NULL DEFAULT 'consulta' CHECK(role IN ('master','gestor','publicador','cadastrador','consulta')),
 cidade                 TEXT,
 estado                 TEXT,
 
@@ -159,6 +159,7 @@ INSERT OR IGNORE INTO config (chave, valor, descricao) VALUES
   ('raio_busca_km', '50', 'Raio de busca de bares em km'),
   ('push_horarios', '17:00,18:00,19:00', 'Horários do cron push (quarta)'),
   ('push_ativo', '1', 'Push automático ativo'),
+  ('push_manual_limite_mensal', '4', 'Limite mensal de disparos manuais de push'),
   ('age_gate_min', '18', 'Idade mínima'),
   ('age_gate_max', '80', 'Idade máxima'),
   ('rate_limit_api', '100', 'Req por minuto — API pública'),
