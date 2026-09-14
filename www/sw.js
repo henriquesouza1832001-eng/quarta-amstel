@@ -1,4 +1,4 @@
-const CACHE = 'quarta-amstel-v11';
+const CACHE = 'quarta-amstel-v12';
 const ASSETS = [
   '/',
   '/index.html',

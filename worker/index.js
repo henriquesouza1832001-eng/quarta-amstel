@@ -393,23 +393,15 @@ function haversine(lat1, lng1, lat2, lng2) {
 }
 
 router.get('/health', () => json({ ok: true, ts: new Date().toISOString() }));
-
-router.get('/bares', async (request, env) => {
-  const ip = request.headers.get('CF-Connecting-IP') || '0.0.0.0';
+router.get('/bares', async (request, env, ctx) => {
   const db = env.DB;
-
-  const configRL = await db.prepare(`SELECT valor FROM config WHERE chave = 'rate_limit_api'`).first();
-  const limite = parseInt(configRL?.valor || '100');
-  if (!(await checkRateLimit(db, ip, '/bares', limite))) {
-    return err('Muitas requisições. Tente novamente em breve.', 429);
-  }
-
   const url = new URL(request.url);
+
   const lat = parseFloat(url.searchParams.get('lat') || '0');
   const lng = parseFloat(url.searchParams.get('lng') || '0');
   const search = url.searchParams.get('search')?.trim() || '';
-  const cidade = url.searchParams.get('cidade') || '';
-  const estado = url.searchParams.get('estado') || '';
+  const cidade = url.searchParams.get('cidade')?.trim() || '';
+  const estado = url.searchParams.get('estado')?.trim() || '';
 
   if (hasSQLInjection(search) || hasSQLInjection(cidade)) {
     return err('Parâmetros inválidos', 400);
@@ -431,39 +423,175 @@ router.get('/bares', async (request, env) => {
     }, 400);
   }
 
-  const configRaio = await db.prepare(`SELECT valor FROM config WHERE chave = 'raio_busca_km'`).first();
-  const raioKm = parseFloat(configRaio?.valor || '50');
+  const hoje = new Date().toISOString().split('T')[0];
 
-  let query = `SELECT * FROM bares WHERE ativo = 1 AND aprovado = 1`;
-  const params = [];
+  // Cache independente da localização do usuário.
+  // O catálogo muda pouco; distância e filtros continuam calculados por request.
+  const cache = caches.default;
 
-  if (search) {
-    query += ` AND (nome LIKE ? OR bairro LIKE ? OR endereco LIKE ?)`;
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  const cacheKey = new Request(
+    `https://cache.quarta-amstel.local/catalogo-bares?v=2&data=${hoje}`,
+    { method: 'GET' }
+  );
+
+  let catalogo;
+
+  const cached = await cache.match(cacheKey);
+
+  if (cached) {
+    catalogo = await cached.json();
+  } else {
+    const [
+      configRaioResult,
+      baresResult,
+      campanhasResult
+    ] = await db.batch([
+      db.prepare(`
+        SELECT valor
+        FROM config
+        WHERE chave = 'raio_busca_km'
+      `),
+
+      db.prepare(`
+        SELECT
+          b.*,
+          h.dia_semana AS h_dia_semana,
+          h.aberto AS h_aberto,
+          h.abertura AS h_abertura,
+          h.fechamento AS h_fechamento
+        FROM bares b
+        LEFT JOIN bar_horarios h
+          ON h.bar_id = b.id
+        WHERE b.ativo = 1
+          AND b.aprovado = 1
+        ORDER BY b.id, h.dia_semana
+      `),
+
+      db.prepare(`
+        SELECT
+          id,
+          titulo,
+          promocao,
+          descricao,
+          cidade,
+          estado,
+          bar_id,
+          inicio,
+          fim,
+          ativo,
+          criado_em
+        FROM campanhas
+        WHERE ativo = 1
+          AND status = 'publicada'
+          AND inicio <= ?
+          AND fim >= ?
+        ORDER BY criado_em DESC
+      `).bind(hoje, hoje)
+    ]);
+
+    const raioKm = parseFloat(
+      configRaioResult.results?.[0]?.valor || '50'
+    );
+
+    const linhas = baresResult.results || [];
+    const campanhas = campanhasResult.results || [];
+
+    const mapaBares = new Map();
+
+    for (const linha of linhas) {
+      if (!mapaBares.has(linha.id)) {
+        const bar = { ...linha };
+
+        delete bar.h_dia_semana;
+        delete bar.h_aberto;
+        delete bar.h_abertura;
+        delete bar.h_fechamento;
+
+        bar.horarios = [];
+
+        mapaBares.set(linha.id, bar);
+      }
+
+      if (
+        linha.h_dia_semana !== null &&
+        linha.h_dia_semana !== undefined
+      ) {
+        mapaBares.get(linha.id).horarios.push({
+          dia_semana: linha.h_dia_semana,
+          aberto: linha.h_aberto,
+          abertura: linha.h_abertura,
+          fechamento: linha.h_fechamento
+        });
+      }
+    }
+
+    catalogo = {
+      raioKm,
+      bares: [...mapaBares.values()],
+      campanhas
+    };
+
+    const respostaCache = new Response(
+      JSON.stringify(catalogo),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'public, max-age=30'
+        }
+      }
+    );
+
+    ctx.waitUntil(
+      cache.put(cacheKey, respostaCache)
+    );
   }
 
-  if (cidade) { query += ` AND cidade = ?`; params.push(cidade); }
-  if (estado) { query += ` AND estado = ?`; params.push(estado); }
+  const searchNorm = search.toLowerCase();
+  const cidadeNorm = cidade.toLowerCase();
+  const estadoNorm = estado.toUpperCase();
 
-  const { results } = await db.prepare(query).bind(...params).all();
-  for (const bar of results) {
-  const { results: horarios } = await db.prepare(`
-    SELECT dia_semana, aberto, abertura, fechamento
-    FROM bar_horarios
-    WHERE bar_id = ?
-    ORDER BY dia_semana
-  `).bind(bar.id).all();
+  let bares = catalogo.bares
+    .filter(b => {
+      if (
+        b.lat == null ||
+        b.lng == null ||
+        !Number.isFinite(Number(b.lat)) ||
+        !Number.isFinite(Number(b.lng))
+      ) {
+        return false;
+      }
 
-  bar.horarios = horarios || [];
-}
+      if (searchNorm) {
+        const texto = [
+          b.nome,
+          b.bairro,
+          b.endereco
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
 
-  let bares = results
-    .filter(b =>
-      b.lat != null &&
-      b.lng != null &&
-      Number.isFinite(Number(b.lat)) &&
-      Number.isFinite(Number(b.lng))
-    )
+        if (!texto.includes(searchNorm)) {
+          return false;
+        }
+      }
+
+      if (
+        cidadeNorm &&
+        String(b.cidade || '').trim().toLowerCase() !== cidadeNorm
+      ) {
+        return false;
+      }
+
+      if (
+        estadoNorm &&
+        String(b.estado || '').trim().toUpperCase() !== estadoNorm
+      ) {
+        return false;
+      }
+
+      return true;
+    })
     .map(b => ({
       ...b,
       distancia_km: haversine(
@@ -473,82 +601,82 @@ router.get('/bares', async (request, env) => {
         Number(b.lng)
       )
     }))
-    .filter(b => b.distancia_km <= raioKm)
+    .filter(b => b.distancia_km <= catalogo.raioKm)
     .sort((a, b) => a.distancia_km - b.distancia_km);
 
-  const hoje = new Date().toISOString().split('T')[0];
+  // Índices de campanha: evita .find() repetidamente para cada bar.
+  const campanhasPorBar = new Map();
+  const campanhasPorCidade = new Map();
+  const campanhasPorEstado = new Map();
 
-const { results: campanhas } = await db.prepare(`
-  SELECT
-    id,
-    titulo,
-    promocao,
-    descricao,
-    cidade,
-    estado,
-    bar_id,
-    inicio,
-    fim,
-    ativo,
-    criado_em
-  FROM campanhas
-  WHERE ativo = 1
-    AND status = 'publicada'
-    AND inicio <= ?
-    AND fim >= ?
-  ORDER BY criado_em DESC
-`).bind(hoje, hoje).all();
+  let campanhaNacional = null;
 
-function escolherCampanhaParaBar(bar) {
-  const especificaBar = campanhas.find(c =>
-    c.bar_id === bar.id
-  );
+  for (const c of catalogo.campanhas) {
+    if (c.bar_id) {
+      if (!campanhasPorBar.has(c.bar_id)) {
+        campanhasPorBar.set(c.bar_id, c);
+      }
+      continue;
+    }
 
-  if (especificaBar) {
-    return especificaBar;
+    if (c.cidade && c.estado) {
+      const chave =
+        `${String(c.cidade).trim().toLowerCase()}|` +
+        `${String(c.estado).trim().toUpperCase()}`;
+
+      if (!campanhasPorCidade.has(chave)) {
+        campanhasPorCidade.set(chave, c);
+      }
+
+      continue;
+    }
+
+    if (!c.cidade && c.estado) {
+      const chave = String(c.estado).trim().toUpperCase();
+
+      if (!campanhasPorEstado.has(chave)) {
+        campanhasPorEstado.set(chave, c);
+      }
+
+      continue;
+    }
+
+    if (
+      !c.bar_id &&
+      !c.cidade &&
+      !c.estado &&
+      !campanhaNacional
+    ) {
+      campanhaNacional = c;
+    }
   }
 
-  const porCidade = campanhas.find(c =>
-    !c.bar_id &&
-    c.cidade &&
-    c.estado &&
-    String(c.cidade).trim().toLowerCase() ===
-      String(bar.cidade || '').trim().toLowerCase() &&
-    String(c.estado).trim().toUpperCase() ===
-      String(bar.estado || '').trim().toUpperCase()
-  );
+  bares = bares.map(bar => {
+    const chaveCidade =
+      `${String(bar.cidade || '').trim().toLowerCase()}|` +
+      `${String(bar.estado || '').trim().toUpperCase()}`;
 
-  if (porCidade) {
-    return porCidade;
-  }
+    const chaveEstado =
+      String(bar.estado || '').trim().toUpperCase();
 
-  const porEstado = campanhas.find(c =>
-    !c.bar_id &&
-    !c.cidade &&
-    c.estado &&
-    String(c.estado).trim().toUpperCase() ===
-      String(bar.estado || '').trim().toUpperCase()
-  );
+    const campanha =
+      campanhasPorBar.get(bar.id) ||
+      campanhasPorCidade.get(chaveCidade) ||
+      campanhasPorEstado.get(chaveEstado) ||
+      campanhaNacional ||
+      null;
 
-  if (porEstado) {
-    return porEstado;
-  }
+    return {
+      ...bar,
+      campanha_ativa: campanha
+    };
+  });
 
-  const nacional = campanhas.find(c =>
-    !c.bar_id &&
-    !c.cidade &&
-    !c.estado
-  );
-
-  return nacional || null;
-}
-
-bares = bares.map(b => ({
-  ...b,
-  campanha_ativa: escolherCampanhaParaBar(b)
-}));
-
-  return json({ ok: true, total: bares.length, bares });
+  return json({
+    ok: true,
+    total: bares.length,
+    bares
+  });
 });
 
 router.get('/bares/:id', async (request, env) => {
@@ -834,7 +962,7 @@ router.post('/admin/admins', async (request, env) => {
     senha,
     cidade,
     estado,
-    role = 'admin'
+    role = 'consulta'
   } = body;
 
   if (!nome || !email || !senha || !estado) {
@@ -884,6 +1012,34 @@ router.post('/admin/admins', async (request, env) => {
 
   const db = env.DB;
 
+  const limiteUsuarios = 15;
+  const totalAtivos = await db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM admins
+    WHERE role != 'master' AND ativo = 1
+  `).first();
+
+  if (Number(totalAtivos?.total || 0) >= limiteUsuarios) {
+    return err(`Limite de ${limiteUsuarios} usuários ativos atingido.`, 409);
+  }
+
+  if (role === 'gestor') {
+    if (cargoNormalizado(admin) !== 'master') {
+      return err('Somente o Master pode criar a conta Gestor.', 403);
+    }
+
+    const gestorAtivo = await db.prepare(`
+      SELECT id
+      FROM admins
+      WHERE role = 'gestor' AND ativo = 1
+      LIMIT 1
+    `).first();
+
+    if (gestorAtivo) {
+      return err('Já existe um Gestor ativo. O sistema permite apenas um.', 409);
+    }
+  }
+
   const emailNormalizado =
     String(email).trim().toLowerCase();
 
@@ -915,14 +1071,15 @@ router.post('/admin/admins', async (request, env) => {
       can_manage_all_regions,
       ativo
     )
-    VALUES (?, ?, ?, ?, ?, ?, 0, 0, 0, 1)
+    VALUES (?, ?, ?, ?, ?, ?, 0, ?, 0, 1)
   `).bind(
     String(nome).trim(),
     emailNormalizado,
     senhaHash,
     role,
     cidadeNormalizada,
-    estadoNormalizado
+    estadoNormalizado,
+    role === 'gestor' ? 1 : 0
   ).run();
 
   return json({
@@ -962,9 +1119,8 @@ router.put('/admin/admins/:id/status', async (request, env) => {
   const ativo = Number(body.ativo) === 1 ? 1 : 0;
 
   const db = env.DB;
-
   const alvo = await db.prepare(`
-    SELECT id, role
+    SELECT id, role, ativo
     FROM admins
     WHERE id = ?
   `).bind(id).first();
@@ -979,6 +1135,33 @@ router.put('/admin/admins/:id/status', async (request, env) => {
       403
     );
   }
+
+  if (ativo === 1 && Number(alvo.ativo) !== 1) {
+    const limiteUsuarios = 15;
+    const totalAtivos = await db.prepare(`
+      SELECT COUNT(*) AS total
+      FROM admins
+      WHERE role != 'master' AND ativo = 1
+    `).first();
+
+    if (Number(totalAtivos?.total || 0) >= limiteUsuarios) {
+      return err(`Limite de ${limiteUsuarios} usuários ativos atingido.`, 409);
+    }
+
+    if (alvo.role === 'gestor') {
+      const outroGestor = await db.prepare(`
+        SELECT id
+        FROM admins
+        WHERE role = 'gestor' AND ativo = 1 AND id != ?
+        LIMIT 1
+      `).bind(id).first();
+
+      if (outroGestor) {
+        return err('Já existe um Gestor ativo. O sistema permite apenas um.', 409);
+      }
+    }
+  }
+
 
   await db.prepare(`
     UPDATE admins
@@ -1044,7 +1227,7 @@ async function salvarHorariosBar(db, barId, horarios) {
   }
 }
 router.get('/admin/bares', async (request, env) => {
-  const admin = await requireAuth(request, env, ['master', 'admin', 'viewer']);
+  const admin = await requireAuth(request, env);
   if (!admin) return err('Não autorizado', 401);
 
   const db = env.DB;
@@ -1055,18 +1238,6 @@ router.get('/admin/bares', async (request, env) => {
 
   let query = `SELECT * FROM bares WHERE 1=1`;
   const params = [];
-
-  if (Number(admin.can_manage_all_regions || 0) !== 1) {
-  if (admin.cidade && admin.estado) {
-    query += ` AND cidade = ? AND estado = ?`;
-    params.push(admin.cidade, admin.estado);
-  } else if (admin.estado) {
-    query += ` AND estado = ?`;
-    params.push(admin.estado);
-  } else {
-    query += ` AND 1 = 0`;
-  }
-}
 
   if (aprovado !== null && aprovado !== undefined) { query += ` AND aprovado = ?`; params.push(parseInt(aprovado)); }
   if (cidade) { query += ` AND cidade = ?`; params.push(cidade); }
@@ -1404,8 +1575,8 @@ router.post('/admin/bares/import', async (request, env) => {
   const admin = await requireAuth(request, env);
 if (!admin) return err('Não autorizado', 401);
 
-if (!podeCriarConteudo(admin)) {
-  return err('Seu perfil não pode importar bares.', 403);
+if (cargoNormalizado(admin) !== 'master') {
+  return err('Importação em massa disponível somente para o Master.', 403);
 }
 
   let body;
@@ -1465,41 +1636,6 @@ router.get('/admin/campanhas', async (request, env) => {
   `;
 
   const params = [];
-
-  if (Number(admin.can_manage_all_regions || 0) !== 1) {
-    if (admin.cidade && admin.estado) {
-      query += `
-        AND (
-          (c.cidade = ? AND c.estado = ?)
-          OR
-          (b.cidade = ? AND b.estado = ?)
-          OR
-          (c.cidade IS NULL AND c.estado IS NULL AND c.bar_id IS NULL)
-        )
-      `;
-
-      params.push(
-        admin.cidade,
-        admin.estado,
-        admin.cidade,
-        admin.estado
-      );
-
-    } else if (admin.estado) {
-      query += `
-        AND (
-          c.estado = ?
-          OR b.estado = ?
-          OR (c.estado IS NULL AND c.bar_id IS NULL)
-        )
-      `;
-
-      params.push(admin.estado, admin.estado);
-
-    } else {
-      query += ` AND 1 = 0`;
-    }
-  }
 
   query += ` ORDER BY c.criado_em DESC`;
 
@@ -1990,9 +2126,9 @@ router.post('/admin/push/send', async (request, env) => {
   const admin = await requireAuth(request, env);
 if (!admin) return err('Não autorizado', 401);
 
-if (!podePublicarConteudo(admin)) {
+if (cargoNormalizado(admin) !== 'master') {
   return err(
-    'Seu perfil não possui permissão para enviar notificações.',
+    'Envio manual de notificações disponível somente para o Master.',
     403
   );
 }
@@ -2002,36 +2138,30 @@ if (!podePublicarConteudo(admin)) {
 
   const { titulo, mensagem, cidade, estado, campanha_id, confirmacao } = body;
   let cidadeEfetiva = cidade ? String(cidade).trim() : null;
-let estadoEfetivo = estado ? String(estado).trim().toUpperCase() : null;
-
-if (Number(admin.can_manage_all_regions || 0) !== 1) {
-  if (admin.cidade) {
-    cidadeEfetiva = admin.cidade;
-  }
-
-  if (admin.estado) {
-    estadoEfetivo = admin.estado;
-  }
-}
-
-if (
-  Number(admin.can_manage_all_regions || 0) !== 1 &&
-  !adminPodeGerenciarLocal(
-    admin,
-    cidadeEfetiva || '',
-    estadoEfetivo || ''
-  )
-) {
-  return err('Você não pode enviar push para esta região.', 403);
-}
+  let estadoEfetivo = estado ? String(estado).trim().toUpperCase() : null;
 
   if (confirmacao !== 'CONFIRMAR') return err('Digite CONFIRMAR para enviar push');
   if (!titulo || !mensagem) return err('Título e mensagem obrigatórios');
 
   const db = env.DB;
 
-  if (!(await checkRateLimit(db, admin.id, '/admin/push/send', 3, 1440))) {
-    return err('Limite de 3 disparos por dia atingido', 429);
+  const limiteMensalConfig = await db.prepare(`
+    SELECT valor
+    FROM config
+    WHERE chave = 'push_manual_limite_mensal'
+  `).first();
+
+  const limiteMensal = Math.max(1, parseInt(limiteMensalConfig?.valor || '4', 10) || 4);
+
+  const usadosNoMes = await db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM push_log
+    WHERE tipo = 'manual'
+      AND strftime('%Y-%m', criado_em) = strftime('%Y-%m', 'now')
+  `).first();
+
+  if (Number(usadosNoMes?.total || 0) >= limiteMensal) {
+    return err(`Limite mensal de ${limiteMensal} disparos manuais atingido.`, 429);
   }
 
   let query = `SELECT id, endpoint, p256dh, auth_key FROM push_subscriptions WHERE ativo = 1`;
@@ -2091,7 +2221,7 @@ router.get('/admin/security/logs', async (request, env) => {
     return err('Não autorizado', 401);
   }
 
-  if (!temPermissao(admin, 'can_security')) {
+  if (cargoNormalizado(admin) !== 'master') {
     return err('Sem permissão para acessar Segurança', 403);
   }
 
@@ -2117,7 +2247,7 @@ router.get('/admin/security/blocked', async (request, env) => {
     return err('Não autorizado', 401);
   }
 
-  if (!temPermissao(admin, 'can_security')) {
+  if (cargoNormalizado(admin) !== 'master') {
     return err('Sem permissão para acessar Segurança', 403);
   }
 
@@ -2133,7 +2263,7 @@ router.delete('/admin/security/blocked/:ip', async (request, env) => {
     return err('Não autorizado', 401);
   }
 
-  if (!temPermissao(admin, 'can_security')) {
+  if (cargoNormalizado(admin) !== 'master') {
     return err('Sem permissão para gerenciar Segurança', 403);
   }
 
@@ -2203,7 +2333,7 @@ router.get('/admin/stats', async (request, env) => {
 
   let ameacas24h;
 
-  if (temPermissao(admin, 'can_security')) {
+  if (cargoNormalizado(admin) === 'master') {
     const ameacas = await db.prepare(`
       SELECT COUNT(*) AS total
       FROM security_log
@@ -2221,7 +2351,7 @@ router.get('/admin/stats', async (request, env) => {
     pushes_enviados: pushes?.total || 0
   };
 
-  if (temPermissao(admin, 'can_security')) {
+  if (cargoNormalizado(admin) === 'master') {
     stats.ameacas_24h = ameacas24h;
   }
 
